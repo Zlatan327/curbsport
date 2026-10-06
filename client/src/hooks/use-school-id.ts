@@ -27,5 +27,13 @@ export function useSchoolId() {
     localStorage.setItem("inside-life-school-id", id);
   };
 
-  return { schoolId, updateSchoolId };
+  // Derive the school name for the UI
+  let schoolName = "UNIZIK (Awka)"; // default
+  if (user?.school?.name) {
+    schoolName = user.school.name;
+  } else if (schoolId !== "1") {
+    schoolName = `Campus ${schoolId}`; // fallback if not 1 and not logged in
+  }
+
+  return { schoolId, schoolName, updateSchoolId };
 }

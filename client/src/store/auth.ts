@@ -38,5 +38,5 @@ export const useAuthStore = create<AuthState>((set) => ({
 }));
 
 export function userDisplayName(user: AuthUser | null): string {
-  return user?.name || user?.fullName || "Player";
+  return user?.alias || "Player";
 }

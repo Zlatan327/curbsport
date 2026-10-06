@@ -18,7 +18,7 @@ const navigation = [
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { schoolId } = useSchoolId();
+  const { schoolId, schoolName } = useSchoolId();
   const [n1p, setN1p] = useState<{ message: string; pitchId: number } | null>(null);
 
   useEffect(() => {
@@ -44,9 +44,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
     <div className="app-frame">
       <header className="topbar">
         <Brand />
-        <Link href="/profile" className="city-pill" aria-label="Change your school ID in Profile">
+        <Link href="/profile" className="city-pill" aria-label="Change your school in Profile">
           <Compass size={14} />
-          <span>CAMPUS / {schoolId}</span>
+          <span>{schoolName.toUpperCase()}</span>
         </Link>
       </header>
       
