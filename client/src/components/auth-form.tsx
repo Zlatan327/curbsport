@@ -72,7 +72,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <span>{isRegister ? "Already in the game?" : "New around here?"}</span>
         <Link href={isRegister ? "/login" : "/register"}>{isRegister ? "Log in" : "Join the set"}</Link>
       </div>
-      <p className="auth-card__fine">Your password goes straight to the API over your connection. We don't use Google or third-party trackers.</p>
+      <p className="auth-card__fine">Your password goes straight to the API over your connection. We don&apos;t use Google or third-party trackers.</p>
     </div>
   );
 }
