@@ -1,0 +1,140 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model City {
+  id      Int     @id @default(autoincrement())
+  name    String  @unique
+  lgaZone String  @map("lga_zone")
+  pitches Pitch[]
+  users   User[]
+
+  @@index([lgaZone])
+}
+
+model User {
+  id               Int      @id @default(autoincrement())
+  alias            String   @unique
+  passwordHash     String   @map("password_hash")
+  cityId           Int      @map("city_id")
+  city             City     @relation(fields: [cityId], references: [id])
+  favoritePosition String   @default("Midfielder") @map("favorite_position")
+  reputationScore  Int      @default(10) @map("reputation_score")
+  matchesPlayed    Int      @default(0) @map("matches_played")
+  goalsScored      Int      @default(0) @map("goals_scored")
+  manOfTheMatch    Int      @default(0) @map("man_of_the_match")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  createdPitches   Pitch[]         @relation("PitchCreator")
+  hostedLobbies    MatchLobby[]    @relation("LobbyHost")
+  lobbyMemberships LobbyMember[]
+  banterMessages   BanterMessage[]
+  pitchVotes       PitchVote[]
+  favoritePitches  FavoritePitch[]
+}
+
+model FavoritePitch {
+  userId  Int      @map("user_id")
+  pitchId Int      @map("pitch_id")
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pitch   Pitch    @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  addedAt DateTime @default(now()) @map("added_at")
+
+  @@id([userId, pitchId])
+}
+
+model Pitch {
+  id                  Int                @id @default(autoincrement())
+  name                String
+  fieldType           String             @map("field_type")
+  priceBracket        String             @map("price_bracket")
+  cityId              Int                @map("city_id")
+  city                City               @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  landmarkDescription String             @map("landmark_description")
+  latitude            Decimal?           @db.Decimal(9, 6)
+  longitude           Decimal?           @db.Decimal(9, 6)
+  verificationStatus  VerificationStatus @default(GHOST) @map("verification_status")
+  confirmationCount   Int                @default(0) @map("confirmation_count")
+  imageUrl            String?            @map("image_url")
+  activeStatus        PitchActiveStatus  @default(UNKNOWN) @map("active_status")
+  createdById         Int?               @map("created_by")
+  createdBy           User?              @relation("PitchCreator", fields: [createdById], references: [id])
+  createdAt           DateTime           @default(now()) @map("created_at")
+
+  lobbies        MatchLobby[]
+  banterMessages BanterMessage[]
+  votes          PitchVote[]
+}
+
+enum VerificationStatus {
+  GHOST
+  COMMUNITY_VERIFIED
+  FLAGGED
+}
+
+enum PitchActiveStatus {
+  UNKNOWN
+  DRY
+  BUILDING
+  LIVE
+}
+
+model MatchLobby {
+  id          Int         @id @default(autoincrement())
+  pitchId     Int         @map("pitch_id")
+  pitch       Pitch       @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  hostUserId  Int         @map("host_user_id")
+  host        User        @relation("LobbyHost", fields: [hostUserId], references: [id])
+  teamName    String?     @map("team_name")
+  maxPlayers  Int         @default(10) @map("max_players")
+  scheduledAt DateTime    @map("scheduled_at")
+  status      LobbyStatus @default(BUILDING)
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  members LobbyMember[]
+}
+
+enum LobbyStatus {
+  BUILDING
+  FULL
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model LobbyMember {
+  lobbyId  Int        @map("lobby_id")
+  lobby    MatchLobby @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  userId   Int        @map("user_id")
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime   @default(now()) @map("joined_at")
+
+  @@id([lobbyId, userId])
+}
+
+model BanterMessage {
+  id        Int      @id @default(autoincrement())
+  pitchId   Int      @map("pitch_id")
+  pitch     Pitch    @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+}
+
+model PitchVote {
+  id      Int      @id @default(autoincrement())
+  pitchId Int      @map("pitch_id")
+  pitch   Pitch    @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  userId  Int      @map("user_id")
+  user    User     @relation(fields: [userId], references: [id])
+  isUp    Boolean  @map("is_up")
+  votedAt DateTime @default(now()) @map("voted_at")
+
+  @@unique([pitchId, userId])
+}

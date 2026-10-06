@@ -1,0 +1,11 @@
+{
+  "name": "inside-life-workspace",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "pnpm --filter inside-life-client dev",
+    "build": "pnpm --filter inside-life-client build",
+    "lint": "pnpm --filter inside-life-client lint",
+    "typecheck": "pnpm --filter inside-life-client typecheck"
+  }
+}

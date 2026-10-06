@@ -1,0 +1,11 @@
+{
+  "routes": [
+    { "path": "/", "title": "Feed · Inside Life" },
+    { "path": "/map", "title": "Pitch Map · Inside Life" },
+    { "path": "/add", "title": "Drop a Pin · Inside Life" },
+    { "path": "/profile", "title": "Profile · Inside Life" },
+    { "path": "/login", "title": "Login · Inside Life" },
+    { "path": "/register", "title": "Join the Set · Inside Life" },
+    { "path": "/pitches/:id", "title": "Pitch Detail · Inside Life" }
+  ]
+}
