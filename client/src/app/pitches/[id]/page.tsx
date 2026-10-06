@@ -21,7 +21,7 @@ type Tab = "info" | "sets" | "banter";
 const QUICK_MESSAGES = ["We dey ground!", "Any keeper dey?", "5-a-side?", "Be there soon"];
 
 function messageAuthor(message: BanterMessage): string {
-  return message.author || (typeof message.user === "string" ? message.user : message.user?.name) || "Player";
+  return (message.author as string) || (typeof message.user === "string" ? message.user : (message.user?.alias as string)) || "Player";
 }
 
 function displayTime(value?: string): string {
@@ -164,7 +164,7 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
           <h3>{lobby.title || "Local football set"}</h3>
           <p className="lobby-card__note">{lobby.note || "No extra notes. Check in with the host."}</p>
           <div className="lobby-card__meta"><span><Clock3 size={14} /> {lobby.startsAt ? displayTime(lobby.startsAt) : lobby.date || "Time not listed"}</span><span><Users size={14} /> {lobby.playerCount || players.length}/{lobby.maxPlayers || "?"}</span></div>
-          <div className="player-stack" aria-label={`${players.length} players in set`}>{players.slice(0, 5).map((player, index) => { const name = typeof player === "string" ? player : player.name || "P"; return <span key={`${lobby.id}-${index}`} title={name}>{name.slice(0, 1).toUpperCase()}</span>; })}<small>{players.length ? `${players.length} IN` : "BE FIRST IN"}</small></div>
+          <div className="player-stack" aria-label={`${players.length} players in set`}>{players.slice(0, 5).map((player, index) => { const name = typeof player === "string" ? player : (player.alias as string) || "P"; return <span key={`${lobby.id}-${index}`} title={name}>{name.slice(0, 1).toUpperCase()}</span>; })}<small>{players.length ? `${players.length} IN` : "BE FIRST IN"}</small></div>
           <button type="button" className="button button--green button--full lobby-join" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleJoin(lobby.id)}>{lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <Users size={16} />} JOIN THE SET <ArrowUpRight size={16} /></button>
           {isDemoLobby && <p className="demo-explainer">Connect to the API to join live sets.</p>}
         </article>;
