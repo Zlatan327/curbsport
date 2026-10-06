@@ -6,8 +6,8 @@ import { getBanter, getLobbies, getPitch, getPitches, normalizeMessages } from "
 import { getSocket } from "@/lib/socket";
 import type { BanterMessage } from "@/lib/types";
 
-export function usePitches(cityId: string) {
-  return useSWR(cityId ? ["pitches", cityId] : null, ([, id]) => getPitches(id));
+export function usePitches(schoolId: string) {
+  return useSWR(schoolId ? ["pitches", schoolId] : null, ([, id]) => getPitches(id));
 }
 
 export function usePitch(id: string) {

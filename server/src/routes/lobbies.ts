@@ -30,7 +30,7 @@ lobbyRouter.get('/', async (req: AuthRequest, res: Response) => {
       orderBy: { scheduledAt: 'asc' },
       include: {
         host: { select: { alias: true } },
-        pitch: { select: { name: true, cityId: true } },
+        pitch: { select: { name: true, schoolId: true } },
         _count: { select: { members: true } },
         members: {
           select: { user: { select: { alias: true, id: true } } },
@@ -71,13 +71,13 @@ lobbyRouter.post('/', validate(createLobbySchema), async (req: AuthRequest, res:
       include: {
         host: { select: { alias: true } },
         _count: { select: { members: true } },
-        pitch: { select: { cityId: true, name: true } }
+        pitch: { select: { schoolId: true, name: true } }
       },
     });
 
     getIO().to(`pitch:${pitchId}`).emit('lobby:updated', lobby);
-    // N1P Alert broadcast to the city
-    getIO().to(`city:${pitch.cityId}`).emit('n1p:alert', {
+    // N1P Alert broadcast to the school campus
+    getIO().to(`school:${pitch.schoolId}`).emit('n1p:alert', {
       message: `New set building at ${pitch.name}!`,
       pitchId,
       lobbyId: lobby.id

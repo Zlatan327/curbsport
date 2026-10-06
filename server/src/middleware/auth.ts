@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 export interface AuthRequest extends Request {
   user?: {
     userId: number;
-    cityId: number;
+    schoolId: number;
     alias: string;
   };
 }
@@ -22,7 +22,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as {
       userId: number;
-      cityId: number;
+      schoolId: number;
       alias: string;
     };
     req.user = decoded;

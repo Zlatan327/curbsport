@@ -19,13 +19,15 @@ userRouter.get('/me', async (req: AuthRequest, res: Response) => {
       where: { id: req.user!.userId },
       select: {
         id: true,
-        phone: true,
         alias: true,
-        cityId: true,
+        schoolId: true,
         favoritePosition: true,
         reputationScore: true,
+        matchesPlayed: true,
+        goalsScored: true,
+        manOfTheMatch: true,
         createdAt: true,
-        city: { select: { name: true, lgaZone: true } },
+        school: { select: { name: true, institutionType: true } },
         _count: { select: { createdPitches: true } },
       },
     });
@@ -64,6 +66,9 @@ userRouter.patch('/me', validate(updateProfileSchema), async (req: AuthRequest, 
         alias: true,
         favoritePosition: true,
         reputationScore: true,
+        matchesPlayed: true,
+        goalsScored: true,
+        manOfTheMatch: true,
       },
     });
 

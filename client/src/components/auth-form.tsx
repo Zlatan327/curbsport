@@ -28,9 +28,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     
     setBusy(true);
     try {
-      // NOTE: cityId defaults to 1 (Awka) for now during MVP auth flow
+      // NOTE: schoolId defaults to 1 (UNIZIK Awka) for now during MVP auth flow
       const result = isRegister
-        ? await register({ alias: alias.trim(), password, cityId: 1 })
+        ? await register({ alias: alias.trim(), password, schoolId: 1 })
         : await login({ alias: alias.trim(), password });
         
       if (!result?.token) throw new Error("The API response did not include a token.");

@@ -135,12 +135,12 @@ export async function login(payload: { alias: string; password: string }): Promi
   return apiFetch<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify(payload) });
 }
 
-export async function register(payload: { alias: string; password: string; cityId: number }): Promise<AuthResponse> {
+export async function register(payload: { alias: string; password: string; schoolId: number }): Promise<AuthResponse> {
   return apiFetch<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(payload) });
 }
 
-export async function getPitches(cityId: string): Promise<Pitch[]> {
-  return normalizePitches(await apiFetch<unknown>(`/pitches?cityId=${encodeURIComponent(cityId)}`));
+export async function getPitches(schoolId: string): Promise<Pitch[]> {
+  return normalizePitches(await apiFetch<unknown>(`/pitches?schoolId=${encodeURIComponent(schoolId)}`));
 }
 
 export async function getPitch(id: string): Promise<Pitch> {

@@ -9,12 +9,12 @@ import { Notice } from "@/components/notice";
 import { EmptyState, LoadingState } from "@/components/page-state";
 import { PitchCard } from "@/components/pitch-card";
 import { DEMO_PITCHES } from "@/lib/demo";
-import { useCityId } from "@/hooks/use-city-id";
+import { useschoolId } from "@/hooks/use-school-id";
 import { usePitches } from "@/hooks/use-data";
 
 export default function FeedPage() {
-  const { cityId } = useCityId();
-  const { data, error, isLoading, mutate } = usePitches(cityId);
+  const { schoolId } = useschoolId();
+  const { data, error, isLoading, mutate } = usePitches(schoolId);
   const [query, setQuery] = useState("");
   const pitches = useMemo(() => data ?? (error ? DEMO_PITCHES : []), [data, error]);
   const visiblePitches = useMemo(() => pitches.filter((pitch) => `${pitch.name} ${pitch.address || ""} ${pitch.area || ""}`.toLowerCase().includes(query.toLowerCase())), [pitches, query]);
@@ -40,7 +40,7 @@ export default function FeedPage() {
       {error && <Notice tone="warning" className="offline-notice"><strong>API OFFLINE · PREVIEW MODE</strong><span>Showing sample grounds. Check the backend URL, CORS, and city ID before sharing live data.</span><button type="button" onClick={() => void mutate()} aria-label="Retry API connection"><RefreshCw size={14} /> RETRY</button></Notice>}
 
       <section className="feed-section">
-        <div className="section-heading"><div><p className="eyebrow">GROUND REPORT / {cityId}</p><h2>THE PITCH LIST<span className="section-heading__count">{pitches.length.toString().padStart(2, "0")}</span></h2></div><Link href="/add" className="text-link">DROP A PIN <ArrowUpRight size={15} /></Link></div>
+        <div className="section-heading"><div><p className="eyebrow">GROUND REPORT / {schoolId}</p><h2>THE PITCH LIST<span className="section-heading__count">{pitches.length.toString().padStart(2, "0")}</span></h2></div><Link href="/add" className="text-link">DROP A PIN <ArrowUpRight size={15} /></Link></div>
         <label className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your side…" aria-label="Search pitches" /><span>⌘ K</span></label>
         {isLoading && !data && <div className="feed-loading"><LoadingState label="Checking the ground…" /><div className="skeleton-card" /><div className="skeleton-card" /></div>}
         {!isLoading && visiblePitches.length === 0 && <EmptyState title={query ? "No ground by that name." : "No pitches logged yet."}>{query ? "Try another name or area." : "Be the first to drop a pin in your area."}</EmptyState>}

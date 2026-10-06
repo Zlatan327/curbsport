@@ -11,7 +11,7 @@ export const authRouter = Router();
 const registerSchema = z.object({
   alias: z.string().min(2).max(30).trim(),
   password: z.string().min(6).max(100),
-  cityId: z.number().int().positive(),
+  schoolId: z.number().int().positive(),
   favoritePosition: z.string().max(50).optional(),
 });
 
@@ -23,49 +23,46 @@ const loginSchema = z.object({
 // POST /api/auth/register
 authRouter.post('/register', validate(registerSchema), async (req: Request, res: Response) => {
   try {
-    const { alias, password, cityId, favoritePosition } = req.body;
+    const { alias, password, schoolId, favoritePosition } = req.body;
 
-    // Check if city exists
-    const city = await prisma.city.findUnique({ where: { id: cityId } });
-    if (!city) {
-      res.status(400).json({ error: 'Invalid city' });
+    const school = await prisma.school.findUnique({ where: { id: schoolId } });
+    if (!school) {
+      res.status(400).json({ error: 'Invalid school' });
       return;
     }
 
-    // Check for existing user alias
     const existingAlias = await prisma.user.findUnique({ where: { alias } });
     if (existingAlias) {
       res.status(409).json({ error: 'Username (alias) already taken. Try another one!' });
       return;
     }
 
-    // Hash password and create user
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
       data: {
         alias,
         passwordHash,
-        cityId,
+        schoolId,
         favoritePosition: favoritePosition || 'Midfielder',
       },
       select: {
         id: true,
         alias: true,
-        cityId: true,
+        schoolId: true,
         favoritePosition: true,
         reputationScore: true,
         matchesPlayed: true,
         goalsScored: true,
         manOfTheMatch: true,
         createdAt: true,
-        city: { select: { name: true, lgaZone: true } },
+        school: { select: { name: true, institutionType: true } },
       },
     });
 
     const token = jwt.sign(
-      { userId: user.id, cityId: user.cityId, alias: user.alias },
+      { userId: user.id, schoolId: user.schoolId, alias: user.alias },
       process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '365d' } // Long expiration to keep it bound to device
+      { expiresIn: '365d' }
     );
 
     res.status(201).json({ token, user });
@@ -82,7 +79,7 @@ authRouter.post('/login', validate(loginSchema), async (req: Request, res: Respo
 
     const user = await prisma.user.findUnique({
       where: { alias },
-      include: { city: { select: { name: true, lgaZone: true } } },
+      include: { school: { select: { name: true, institutionType: true } } },
     });
 
     if (!user) {
@@ -97,7 +94,7 @@ authRouter.post('/login', validate(loginSchema), async (req: Request, res: Respo
     }
 
     const token = jwt.sign(
-      { userId: user.id, cityId: user.cityId, alias: user.alias },
+      { userId: user.id, schoolId: user.schoolId, alias: user.alias },
       process.env.JWT_SECRET || 'fallback-secret',
       { expiresIn: '365d' }
     );
@@ -107,13 +104,13 @@ authRouter.post('/login', validate(loginSchema), async (req: Request, res: Respo
       user: {
         id: user.id,
         alias: user.alias,
-        cityId: user.cityId,
+        schoolId: user.schoolId,
         favoritePosition: user.favoritePosition,
         reputationScore: user.reputationScore,
         matchesPlayed: user.matchesPlayed,
         goalsScored: user.goalsScored,
         manOfTheMatch: user.manOfTheMatch,
-        city: user.city,
+        school: user.school,
       },
     });
   } catch (err) {
@@ -130,14 +127,14 @@ authRouter.get('/me', authMiddleware, async (req: AuthRequest, res: Response) =>
       select: {
         id: true,
         alias: true,
-        cityId: true,
+        schoolId: true,
         favoritePosition: true,
         reputationScore: true,
         matchesPlayed: true,
         goalsScored: true,
         manOfTheMatch: true,
         createdAt: true,
-        city: { select: { name: true, lgaZone: true } },
+        school: { select: { name: true, institutionType: true } },
         favoritePitches: {
           include: {
             pitch: true

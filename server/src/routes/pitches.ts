@@ -13,7 +13,7 @@ const createPitchSchema = z.object({
   name: z.string().min(2).max(255).trim(),
   fieldType: z.enum(['Paid Turf', 'School Ground', 'Street Arena']),
   priceBracket: z.string().max(50),
-  cityId: z.number().int().positive(),
+  schoolId: z.number().int().positive(),
   landmarkDescription: z.string().min(10).max(1000).trim(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
@@ -27,30 +27,30 @@ const voteSchema = z.object({
   isUp: z.boolean(),
 });
 
-// GET /api/pitches/cities/list (get all available cities)
-pitchRouter.get('/cities/list', async (_req: Request, res: Response) => {
+// GET /api/pitches/schools/list (get all available schools)
+pitchRouter.get('/schools/list', async (_req: Request, res: Response) => {
   try {
-    const cities = await prisma.city.findMany({
+    const schools = await prisma.school.findMany({
       orderBy: { name: 'asc' },
       include: { _count: { select: { pitches: true } } },
     });
-    res.json({ cities });
+    res.json({ schools });
   } catch (err) {
-    console.error('Fetch cities error:', err);
-    res.status(500).json({ error: 'Failed to fetch cities' });
+    console.error('Fetch schools error:', err);
+    res.status(500).json({ error: 'Failed to fetch schools' });
   }
 });
 
-// GET /api/pitches?cityId=X
+// GET /api/pitches?schoolId=X
 pitchRouter.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const cityId = req.query.cityId ? parseInt(req.query.cityId as string) : req.user!.cityId;
+    const schoolId = req.query.schoolId ? parseInt(req.query.schoolId as string) : req.user!.schoolId;
 
     const pitches = await prisma.pitch.findMany({
-      where: { cityId },
+      where: { schoolId },
       orderBy: [{ verificationStatus: 'asc' }, { confirmationCount: 'desc' }],
       include: {
-        city: { select: { name: true } },
+        school: { select: { name: true } },
         _count: { select: { votes: true, lobbies: true } },
       },
     });
@@ -69,7 +69,7 @@ pitchRouter.get('/:id', async (req: Request, res: Response) => {
     const pitch = await prisma.pitch.findUnique({
       where: { id },
       include: {
-        city: { select: { name: true } },
+        school: { select: { name: true } },
         createdBy: { select: { alias: true } },
         _count: { select: { votes: true, lobbies: true, banterMessages: true } },
       },
@@ -100,7 +100,7 @@ pitchRouter.post('/', validate(createPitchSchema), async (req: AuthRequest, res:
         confirmationCount: 1, // Creator's implicit vote
       },
       include: {
-        city: { select: { name: true } },
+        school: { select: { name: true } },
       },
     });
 

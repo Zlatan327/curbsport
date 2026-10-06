@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Compass, House, MapPinned, Plus, UserRound, Bell } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "@/components/brand";
-import { useCityId } from "@/hooks/use-city-id";
+import { useSchoolId } from "@/hooks/use-school-id";
 import { getSocket } from "@/lib/socket";
 
 const navigation = [
@@ -18,14 +18,14 @@ const navigation = [
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { cityId } = useCityId();
+  const { schoolId } = useSchoolId();
   const [n1p, setN1p] = useState<{ message: string; pitchId: number } | null>(null);
 
   useEffect(() => {
-    if (!cityId) return;
+    if (!schoolId) return;
     const socket = getSocket();
     
-    socket.emit("join_city", cityId);
+    socket.emit("join_school", schoolId);
 
     const handleAlert = (data: { message: string; pitchId: number }) => {
       setN1p(data);
@@ -38,15 +38,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
     return () => {
       socket.off("n1p:alert", handleAlert);
     };
-  }, [cityId]);
+  }, [schoolId]);
 
   return (
     <div className="app-frame">
       <header className="topbar">
         <Brand />
-        <Link href="/profile" className="city-pill" aria-label="Change your city ID in Profile">
+        <Link href="/profile" className="city-pill" aria-label="Change your school ID in Profile">
           <Compass size={14} />
-          <span>ANAMBRA / {cityId}</span>
+          <span>CAMPUS / {schoolId}</span>
         </Link>
       </header>
       

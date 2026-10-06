@@ -7,22 +7,22 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model City {
-  id      Int     @id @default(autoincrement())
-  name    String  @unique
-  lgaZone String  @map("lga_zone")
-  pitches Pitch[]
-  users   User[]
+model School {
+  id              Int     @id @default(autoincrement())
+  name            String  @unique
+  institutionType String  @map("institution_type")
+  pitches         Pitch[]
+  users           User[]
 
-  @@index([lgaZone])
+  @@index([institutionType])
 }
 
 model User {
   id               Int      @id @default(autoincrement())
   alias            String   @unique
   passwordHash     String   @map("password_hash")
-  cityId           Int      @map("city_id")
-  city             City     @relation(fields: [cityId], references: [id])
+  schoolId         Int      @map("school_id")
+  school           School   @relation(fields: [schoolId], references: [id])
   favoritePosition String   @default("Midfielder") @map("favorite_position")
   reputationScore  Int      @default(10) @map("reputation_score")
   matchesPlayed    Int      @default(0) @map("matches_played")
@@ -53,8 +53,8 @@ model Pitch {
   name                String
   fieldType           String             @map("field_type")
   priceBracket        String             @map("price_bracket")
-  cityId              Int                @map("city_id")
-  city                City               @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  schoolId            Int                @map("school_id")
+  school              School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   landmarkDescription String             @map("landmark_description")
   latitude            Decimal?           @db.Decimal(9, 6)
   longitude           Decimal?           @db.Decimal(9, 6)

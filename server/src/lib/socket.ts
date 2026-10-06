@@ -19,10 +19,10 @@ export function initSocket(server: any) {
       console.log(`User ${socket.id} joined pitch:${pitchId}`);
     });
 
-    // Join a city-specific room (for N1P alerts)
-    socket.on('join_city', (cityId: string) => {
-      socket.join(`city:${cityId}`);
-      console.log(`User ${socket.id} joined city:${cityId}`);
+    // Join a school-specific room (for N1P alerts)
+    socket.on('join_school', (schoolId: string) => {
+      socket.join(`school:${schoolId}`);
+      console.log(`User ${socket.id} joined school:${schoolId}`);
     });
 
     socket.on('disconnect', () => {
