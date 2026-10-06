@@ -66,9 +66,10 @@ model Pitch {
   createdBy           User?              @relation("PitchCreator", fields: [createdById], references: [id])
   createdAt           DateTime           @default(now()) @map("created_at")
 
-  lobbies        MatchLobby[]
-  banterMessages BanterMessage[]
-  votes          PitchVote[]
+  lobbies         MatchLobby[]
+  banterMessages  BanterMessage[]
+  votes           PitchVote[]
+  favoritedBy     FavoritePitch[]
 }
 
 enum VerificationStatus {
