@@ -21,13 +21,18 @@ export interface Pitch {
 export interface AuthUser {
   id?: string | number;
   alias?: string;
+  schoolId?: number;
+  school?: {
+    id?: number;
+    name?: string;
+    institutionType?: string;
+  };
   favoritePosition?: string;
   reputationScore?: number;
   matchesPlayed?: number;
   goalsScored?: number;
   manOfTheMatch?: number;
   favoritePitches?: any[];
-  city?: any;
   [key: string]: unknown;
 }
 
