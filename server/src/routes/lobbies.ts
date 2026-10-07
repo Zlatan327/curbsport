@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket';
+import { LobbyStatus } from '@prisma/client';
 
 export const lobbyRouter = Router();
 lobbyRouter.use(authMiddleware);
@@ -126,7 +127,7 @@ lobbyRouter.post('/:id/join', async (req: AuthRequest, res: Response) => {
 
     await prisma.lobbyMember.create({ data: { lobbyId, userId } });
 
-    let newStatus = lobby.status;
+    let newStatus: LobbyStatus = lobby.status;
     const newCount = lobby._count.members + 1;
     if (newCount >= lobby.maxPlayers) {
       newStatus = 'FULL';
@@ -161,7 +162,7 @@ lobbyRouter.post('/:id/leave', async (req: AuthRequest, res: Response) => {
     });
 
     if (lobby) {
-      let newStatus = lobby.status;
+      let newStatus: LobbyStatus = lobby.status;
       if (lobby.status === 'FULL' && lobby._count.members < lobby.maxPlayers) {
         newStatus = 'BUILDING';
         await prisma.matchLobby.update({
