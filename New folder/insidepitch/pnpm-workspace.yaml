@@ -1,9 +1,0 @@
-packages:
-  - client
-
-allowBuilds:
-  next: true
-  '@swc/core': true
-  esbuild: true
-  unrs-resolver: true
-  sharp: false
