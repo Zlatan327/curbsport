@@ -169,17 +169,7 @@ pitchRouter.post('/:id/vote', authMiddleware, validate(voteSchema), async (req: 
     });
 
     // Award reputation for verification
-    if (isUp && upvoteCount === 3) {
-      // Award +5 rep to all upvoters
-      const upvoters = await prisma.pitchVote.findMany({
-        where: { pitchId, isUp: true },
-        select: { userId: true },
-      });
-      await prisma.user.updateMany({
-        where: { id: { in: upvoters.map(v => v.userId) } },
-        data: { reputationScore: { increment: 5 } },
-      });
-    }
+    // (Removed to prevent infinite reputation exploit via vote toggling)
 
     res.json({ pitch, upvotes: upvoteCount, downvotes: downvoteCount });
   } catch (err) {

@@ -63,6 +63,13 @@ matchRouter.post('/result', authMiddleware, validate(matchResultSchema), async (
       return;
     }
 
+    const startTime = Math.max(lobby.scheduledAt.getTime(), lobby.createdAt.getTime());
+    const matchEndTime = new Date(startTime + durationMins * 60000);
+    if (matchEndTime > new Date()) {
+      res.status(400).json({ error: `Match duration (${durationMins} mins) exceeds the time elapsed since lobby creation/start.` });
+      return;
+    }
+
     const isMember = lobby.members.some(m => m.userId === authReq.user!.userId);
     if (!isMember) {
       res.status(403).json({ error: 'Must be a member of the lobby to submit results' });
@@ -235,6 +242,16 @@ matchRouter.post('/:id/dispute', authMiddleware, validate(disputeSchema), async 
 
     if (matchResult.status !== MatchResultStatus.DISPUTED) {
       res.status(400).json({ error: 'Match result must be disputed to apply a slash' });
+      return;
+    }
+
+    // Verify the user attempting to slash was a participant who denied the match
+    const userConfirmation = await prisma.matchConfirmation.findUnique({
+      where: { matchResultId_userId: { matchResultId: matchId, userId: authReq.user!.userId } },
+    });
+
+    if (!userConfirmation || userConfirmation.confirmed) {
+      res.status(403).json({ error: 'Only participants who denied the match can apply a slash' });
       return;
     }
 
