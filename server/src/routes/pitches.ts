@@ -91,6 +91,17 @@ pitchRouter.post('/', authMiddleware, validate(createPitchSchema), async (req: A
   try {
     const data = req.body;
 
+    const userPitchesLast24h = await prisma.pitch.count({
+      where: {
+        createdById: req.user!.userId,
+        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
+    });
+    if (userPitchesLast24h >= 5) {
+      res.status(429).json({ error: 'Daily limit reached: You can only add up to 5 pitches per 24 hours.' });
+      return;
+    }
+
     const pitch = await prisma.pitch.create({
       data: {
         ...data,

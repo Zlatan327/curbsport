@@ -39,6 +39,9 @@ export interface AuthUser {
   heightCm?: number;
   weightKg?: number;
   primarySport?: SportType;
+  avatarUrl?: string;
+  lastSchoolChangeAt?: string;
+  lastAliasChangeAt?: string;
   medicalInfo?: string;
   physicalHistory?: {
     heightCm?: number;

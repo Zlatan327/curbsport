@@ -57,6 +57,17 @@ lobbyRouter.post('/', authMiddleware, validate(createLobbySchema), async (req: A
       return;
     }
 
+    const existingActiveHost = await prisma.matchLobby.findFirst({
+      where: {
+        hostUserId: userId,
+        status: { in: ['BUILDING', 'ACTIVE'] },
+      },
+    });
+    if (existingActiveHost) {
+      res.status(400).json({ error: 'You are already hosting an active set. Complete or cancel it before creating another.' });
+      return;
+    }
+
     const lobby = await prisma.matchLobby.create({
       data: {
         pitchId,
@@ -121,6 +132,19 @@ lobbyRouter.post('/:id/join', authMiddleware, async (req: AuthRequest, res: Resp
     });
     if (existing) {
       res.status(400).json({ error: 'Already in this lobby' });
+      return;
+    }
+
+    const activeMemberships = await prisma.lobbyMember.count({
+      where: {
+        userId,
+        lobby: {
+          status: { in: ['BUILDING', 'ACTIVE'] },
+        },
+      },
+    });
+    if (activeMemberships >= 3) {
+      res.status(400).json({ error: 'You are already in 3 active sets. Leave or finish one before joining another.' });
       return;
     }
 

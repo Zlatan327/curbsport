@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 4000;
 // Security middleware
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
-app.use(express.json({ limit: '500kb' }));
+app.use(express.json({ limit: '5mb' }));
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,

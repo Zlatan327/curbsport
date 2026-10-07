@@ -10,20 +10,20 @@ export const matchRouter = Router();
 
 const matchResultSchema = z.object({
   lobbyId: z.number().int(),
-  durationMins: z.number().int().min(30),
+  durationMins: z.number().int().min(30).max(180),
   stats: z.array(
     z.object({
       userId: z.number().int(),
-      goals: z.number().int().default(0),
-      assists: z.number().int().default(0),
-      cleanSheets: z.number().int().default(0),
-      saves: z.number().int().default(0),
-      tackles: z.number().int().default(0),
-      points: z.number().int().default(0),
-      rebounds: z.number().int().default(0),
-      steals: z.number().int().default(0),
-      blocks: z.number().int().default(0),
-      threePointers: z.number().int().default(0),
+      goals: z.number().int().min(0).max(15).default(0),
+      assists: z.number().int().min(0).max(15).default(0),
+      cleanSheets: z.number().int().min(0).max(1).default(0),
+      saves: z.number().int().min(0).max(30).default(0),
+      tackles: z.number().int().min(0).max(30).default(0),
+      points: z.number().int().min(0).max(80).default(0),
+      rebounds: z.number().int().min(0).max(35).default(0),
+      steals: z.number().int().min(0).max(20).default(0),
+      blocks: z.number().int().min(0).max(15).default(0),
+      threePointers: z.number().int().min(0).max(25).default(0),
     })
   ).min(4, "Minimum 4 players required for quorum"),
 });
@@ -33,6 +33,16 @@ matchRouter.post('/result', authMiddleware, validate(matchResultSchema), async (
     const authReq = req as AuthRequest;
     const { lobbyId, durationMins, stats } = req.body;
     
+    // Check if submitter is crown-banned / slashed
+    const submitter = await prisma.user.findUnique({
+      where: { id: authReq.user!.userId },
+      select: { crownBannedUntil: true },
+    });
+    if (submitter?.crownBannedUntil && new Date(submitter.crownBannedUntil) > new Date()) {
+      res.status(403).json({ error: 'Account is under a competitive ban due to past slashing penalties. Cannot submit match results.' });
+      return;
+    }
+
     // Check if user submitted > 2 results today
     const today = new Date();
     today.setHours(0, 0, 0, 0);

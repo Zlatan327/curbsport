@@ -147,6 +147,11 @@ export async function updateProfile(payload: Partial<AuthUser>): Promise<{ user:
   return apiFetch<{ user: AuthUser }>("/users/me", { method: "PATCH", body: JSON.stringify(payload) });
 }
 
+export async function getSchools(): Promise<{ id: number; name: string }[]> {
+  const res = await apiFetch<{ schools: { id: number; name: string }[] }>("/pitches/schools/list");
+  return res.schools || [];
+}
+
 export async function getPitches(schoolId: string): Promise<Pitch[]> {
   return normalizePitches(await apiFetch<unknown>(`/pitches?schoolId=${encodeURIComponent(schoolId)}`));
 }

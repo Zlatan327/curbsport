@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import { useState, useRef, type FormEvent, type ChangeEvent } from 'react';
+import { ArrowUpRight, Camera, UserRound } from 'lucide-react';
 import { updateProfile } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { AsyncButton } from '@/components/async-button';
@@ -15,6 +15,53 @@ export function EditProfile() {
   const [medicalInfo, setMedicalInfo] = useState(user?.medicalInfo || '');
   const [heightCm, setHeightCm] = useState(user?.heightCm?.toString() || '');
   const [weightKg, setWeightKg] = useState(user?.weightKg?.toString() || '');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Compress image to lightweight base64
+  function handleAvatarFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file from your gallery.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.82);
+          setAvatarPreview(compressed);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,6 +74,9 @@ export function EditProfile() {
       if (heightCm) payload.heightCm = parseInt(heightCm, 10);
       if (weightKg) payload.weightKg = parseInt(weightKg, 10);
       if (medicalInfo) payload.medicalInfo = medicalInfo;
+      if (avatarPreview && avatarPreview !== user?.avatarUrl) {
+        payload.avatarUrl = avatarPreview;
+      }
 
       const result = await updateProfile(payload);
       if (token) setSession(token, { ...user, ...result.user });
@@ -41,15 +91,43 @@ export function EditProfile() {
   return (
     <form className="profile-settings" onSubmit={onSubmit}>
       <div className="form-section-heading">
-        <span>03</span>
+        <span>02</span>
         <div>
-          <p className="eyebrow">PHYSICAL & MEDICAL</p>
-          <h2>PLAYER BIOMETRICS</h2>
+          <p className="eyebrow">PLAYER IDENTITY & BIOMETRICS</p>
+          <h2>AVATAR & STATS</h2>
         </div>
       </div>
       
       {error && <Notice tone="warning">{error}</Notice>}
-      {success && <Notice tone="success">Biometrics updated successfully.</Notice>}
+      {success && <Notice tone="success">Profile & biometrics updated successfully.</Notice>}
+
+      {/* Avatar Gallery Upload */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem', padding: '1rem', background: '#111', borderRadius: '12px' }}>
+        <div style={{ width: '70px', height: '70px', borderRadius: '50%', overflow: 'hidden', border: '2px solid #00f076', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#222', flexShrink: 0 }}>
+          {avatarPreview ? (
+            <img src={avatarPreview} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <UserRound size={32} color="#00f076" />
+          )}
+        </div>
+        <div>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={handleAvatarFile}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            style={{ background: '#222', border: '1px solid #444', color: '#fff', padding: '0.45rem 0.85rem', borderRadius: '8px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+          >
+            <Camera size={14} /> CHOOSE FROM GALLERY
+          </button>
+          <p style={{ fontSize: '0.72rem', color: '#888', marginTop: '4px' }}>Upload your baller picture (JPEG/PNG)</p>
+        </div>
+      </div>
 
       <div className="form-stack">
         <label className="field">
@@ -85,7 +163,7 @@ export function EditProfile() {
         </label>
         
         <AsyncButton type="submit" variant="outline" busy={busy}>
-          UPDATE BIOMETRICS <ArrowUpRight size={16} />
+          SAVE IDENTITY & BIOMETRICS <ArrowUpRight size={16} />
         </AsyncButton>
       </div>
 

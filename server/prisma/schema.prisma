@@ -42,6 +42,9 @@ model User {
   weightKg           Int?               @map("weight_kg")
   primarySport       SportType          @default(FOOTBALL) @map("primary_sport")
   medicalInfo        String?            @map("medical_info")
+  avatarUrl          String?            @map("avatar_url")
+  lastSchoolChangeAt DateTime?          @map("last_school_change_at")
+  lastAliasChangeAt  DateTime?          @map("last_alias_change_at")
   physicalHistory    PhysicalStatHistory[]
   matchStats         MatchStat[]
   matchConfirmations MatchConfirmation[]
