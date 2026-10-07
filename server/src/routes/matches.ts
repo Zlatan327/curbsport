@@ -414,6 +414,22 @@ matchRouter.get('/stats/:userId', async (req: Request, res: Response): Promise<v
   try {
     const userId = parseInt(req.params.userId as string, 10);
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        alias: true,
+        reputationScore: true,
+        favoritePosition: true,
+        crownBannedUntil: true,
+      }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
     const stats = await prisma.matchStat.findMany({
       where: {
         userId,
@@ -428,28 +444,38 @@ matchRouter.get('/stats/:userId', async (req: Request, res: Response): Promise<v
       },
     });
 
+    const slashCount = await prisma.slashRecord.count({
+      where: { slashedUserId: userId }
+    });
+
     const sportStats = {
-      [SportType.FOOTBALL]: { matches: 0, goals: 0, assists: 0, cleanSheets: 0, saves: 0, tackles: 0 },
-      [SportType.BASKETBALL]: { matches: 0, points: 0, rebounds: 0, steals: 0, blocks: 0, threePointers: 0 },
+      userId: user.id,
+      alias: user.alias,
+      reputationScore: user.reputationScore,
+      footballPosition: user.favoritePosition, // Legacy mapping
+      totalMatches: 0,
+      football: { goals: 0, assists: 0, cleanSheets: 0, saves: 0, tackles: 0 },
+      basketball: { points: 0, rebounds: 0, steals: 0, blocks: 0, threePointers: 0 },
+      crowns: 0, // Placeholder: computing exact crowns requires historical leaderboard querying
+      isCrownBanned: user.crownBannedUntil ? new Date(user.crownBannedUntil) > new Date() : false,
+      slashCount,
     };
 
     for (const stat of stats) {
       const sport = stat.matchResult.sportType;
-      // Because TypeScript, ensure the enum is used safely:
+      sportStats.totalMatches += 1;
       if (sport === SportType.FOOTBALL) {
-        sportStats[SportType.FOOTBALL].matches += 1;
-        sportStats[SportType.FOOTBALL].goals += stat.goals;
-        sportStats[SportType.FOOTBALL].assists += stat.assists;
-        sportStats[SportType.FOOTBALL].cleanSheets += stat.cleanSheets;
-        sportStats[SportType.FOOTBALL].saves += stat.saves;
-        sportStats[SportType.FOOTBALL].tackles += stat.tackles;
+        sportStats.football.goals += stat.goals;
+        sportStats.football.assists += stat.assists;
+        sportStats.football.cleanSheets += stat.cleanSheets;
+        sportStats.football.saves += stat.saves;
+        sportStats.football.tackles += stat.tackles;
       } else if (sport === SportType.BASKETBALL) {
-        sportStats[SportType.BASKETBALL].matches += 1;
-        sportStats[SportType.BASKETBALL].points += stat.points;
-        sportStats[SportType.BASKETBALL].rebounds += stat.rebounds;
-        sportStats[SportType.BASKETBALL].steals += stat.steals;
-        sportStats[SportType.BASKETBALL].blocks += stat.blocks;
-        sportStats[SportType.BASKETBALL].threePointers += stat.threePointers;
+        sportStats.basketball.points += stat.points;
+        sportStats.basketball.rebounds += stat.rebounds;
+        sportStats.basketball.steals += stat.steals;
+        sportStats.basketball.blocks += stat.blocks;
+        sportStats.basketball.threePointers += stat.threePointers;
       }
     }
 
