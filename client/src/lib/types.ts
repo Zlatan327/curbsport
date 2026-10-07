@@ -36,6 +36,16 @@ export interface AuthUser {
   goalsScored?: number;
   manOfTheMatch?: number;
   favoritePitches?: any[];
+  heightCm?: number;
+  weightKg?: number;
+  primarySport?: SportType;
+  medicalInfo?: string;
+  physicalHistory?: {
+    heightCm?: number;
+    weightKg?: number;
+    medicalInfo?: string;
+    createdAt: string;
+  }[];
   [key: string]: unknown;
 }
 

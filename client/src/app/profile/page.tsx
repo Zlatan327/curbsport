@@ -8,20 +8,30 @@ import { Notice } from "@/components/notice";
 import { PlayerStats } from "@/components/player-stats";
 import { SignInPrompt } from "@/components/sign-in-prompt";
 import { useSchoolId } from "@/hooks/use-school-id";
+import { updateProfile } from "@/lib/api";
 import { useAuthStore, userDisplayName } from "@/store/auth";
+import { EditProfile } from "@/components/edit-profile";
 
 export default function ProfilePage() {
-  const { token, user, hydrated, signOut } = useAuthStore();
+  const { token, user, hydrated, signOut, setSession } = useAuthStore();
   const { schoolId, schoolName, updateSchoolId } = useSchoolId();
   const [schoolDraft, setSchoolDraft] = useState(schoolId);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => setSchoolDraft(schoolId), [schoolId]);
 
-  function saveSchool(event: FormEvent<HTMLFormElement>) {
+  async function saveSchool(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     updateSchoolId(schoolDraft);
     setSaved(true);
+    if (token && user) {
+      try {
+        const result = await updateProfile({ schoolId: parseInt(schoolDraft, 10) });
+        setSession(token, { ...user, ...result.user });
+      } catch (err) {
+        console.error("Failed to sync school to backend", err);
+      }
+    }
   }
 
   return <AppFrame>
@@ -35,6 +45,7 @@ export default function ProfilePage() {
         {saved && <Notice tone="success">Campus ID {schoolDraft} saved on this device.</Notice>}
       </form>
       {user?.id && <PlayerStats userId={user.id} />}
+      <EditProfile />
       <button className="signout-button" type="button" onClick={signOut}><LogOut size={16} /> SIGN OUT</button>
       <p className="profile-note">JWT stays in this browser&apos;s localStorage and is sent as a Bearer token on API calls.</p>
     </>}

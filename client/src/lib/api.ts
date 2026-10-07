@@ -139,6 +139,14 @@ export async function register(payload: { alias: string; password: string; schoo
   return apiFetch<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(payload) });
 }
 
+export async function fetchMe(): Promise<{ user: AuthUser }> {
+  return apiFetch<{ user: AuthUser }>("/users/me");
+}
+
+export async function updateProfile(payload: Partial<AuthUser>): Promise<{ user: AuthUser }> {
+  return apiFetch<{ user: AuthUser }>("/users/me", { method: "PATCH", body: JSON.stringify(payload) });
+}
+
 export async function getPitches(schoolId: string): Promise<Pitch[]> {
   return normalizePitches(await apiFetch<unknown>(`/pitches?schoolId=${encodeURIComponent(schoolId)}`));
 }
