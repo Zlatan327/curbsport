@@ -77,50 +77,60 @@ async function main() {
     { name: 'Tansian Campus Pitch', fieldType: 'School Ground', priceBracket: 'Free', schoolId: tansian.id, landmarkDescription: 'Main open field in the Umunya campus.' },
     
     // Madonna Okija
-    { name: 'Madonna Okija Field', fieldType: 'School Ground', priceBracket: 'Free', schoolId: madonna.id, landmarkDescription: 'Sports ground near the law faculty in the Okija campus.' },
+    { name: 'Madonna Okija Field', fieldType: 'School Ground', priceBracket: 'Free', schoolId: madonna.id, sportType: 'FOOTBALL', landmarkDescription: 'Sports ground near the law faculty in the Okija campus.' },
 
     // UNILAG (Akoka)
-    { name: 'UNILAG Sports Center', fieldType: 'School Ground', priceBracket: 'Free', schoolId: unilag.id, landmarkDescription: 'Main stadium complex near the university gate.' },
-    { name: 'Eni-Njoku Hostel Court', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: unilag.id, landmarkDescription: 'Basketball and football courts near Eni-Njoku hostel.' },
-    { name: 'Moremi Car Park', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: unilag.id, landmarkDescription: 'Popular pickup spot near Moremi Hall.' },
+    { name: 'UNILAG Sports Center', fieldType: 'School Ground', priceBracket: 'Free', schoolId: unilag.id, sportType: 'FOOTBALL', landmarkDescription: 'Main stadium complex near the university gate.' },
+    { name: 'UNILAG Indoor Sports Hall', fieldType: 'Paid Turf', priceBracket: 'Paid', schoolId: unilag.id, sportType: 'BASKETBALL', landmarkDescription: 'Main indoor basketball court for UNILAG.' },
+    { name: 'Eni-Njoku Hostel Court', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: unilag.id, sportType: 'BASKETBALL', landmarkDescription: 'Basketball and football courts near Eni-Njoku hostel.' },
+    { name: 'Moremi Car Park', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: unilag.id, sportType: 'FOOTBALL', landmarkDescription: 'Popular pickup spot near Moremi Hall.' },
 
     // UI (Ibadan)
-    { name: 'Awo Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: ui.id, landmarkDescription: 'Main UI stadium near Awolowo Hall.' },
-    { name: 'Zik Hall Pitch', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: ui.id, landmarkDescription: 'Open maracana field next to Nnamdi Azikiwe Hall.' },
-    { name: 'Indy Hall Court', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: ui.id, landmarkDescription: 'Basketball court in Independence Hall.' },
+    { name: 'Awo Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: ui.id, sportType: 'FOOTBALL', landmarkDescription: 'Main UI stadium near Awolowo Hall.' },
+    { name: 'UI SUB Basketball Court', fieldType: 'School Ground', priceBracket: 'Free', schoolId: ui.id, sportType: 'BASKETBALL', landmarkDescription: 'Court right beside the Student Union Building.' },
+    { name: 'Zik Hall Pitch', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: ui.id, sportType: 'FOOTBALL', landmarkDescription: 'Open maracana field next to Nnamdi Azikiwe Hall.' },
+    { name: 'Indy Hall Court', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: ui.id, sportType: 'BASKETBALL', landmarkDescription: 'Basketball court in Independence Hall.' },
 
     // OAU (Ile-Ife)
-    { name: 'OAU Sports Complex', fieldType: 'School Ground', priceBracket: 'Free', schoolId: oau.id, landmarkDescription: 'The massive central sports complex on campus.' },
-    { name: 'Awo Hall Maracana', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: oau.id, landmarkDescription: 'Legendary gravel pitch near Awolowo Hall.' },
-    { name: 'Fajuyi Hall Court', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: oau.id, landmarkDescription: 'Basketball court behind Fajuyi Hall.' },
+    { name: 'OAU Sports Complex', fieldType: 'School Ground', priceBracket: 'Free', schoolId: oau.id, sportType: 'FOOTBALL', landmarkDescription: 'The massive central sports complex on campus.' },
+    { name: 'OAU Sports Complex Indoor Court', fieldType: 'School Ground', priceBracket: 'Free', schoolId: oau.id, sportType: 'BASKETBALL', landmarkDescription: 'Indoor court where varsity matches are played.' },
+    { name: 'Awo Hall Maracana', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: oau.id, sportType: 'FOOTBALL', landmarkDescription: 'Legendary gravel pitch near Awolowo Hall.' },
+    { name: 'Fajuyi Hall Court', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: oau.id, sportType: 'BASKETBALL', landmarkDescription: 'Basketball court behind Fajuyi Hall.' },
 
     // ABU (Zaria)
-    { name: 'ABU Main Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: abu.id, landmarkDescription: 'Main athletic and football stadium in Samaru Campus.' },
-    { name: 'Suleiman Hall Pitch', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: abu.id, landmarkDescription: 'Open playing field near Suleiman Hall.' },
+    { name: 'ABU Main Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: abu.id, sportType: 'FOOTBALL', landmarkDescription: 'Main athletic and football stadium in Samaru Campus.' },
+    { name: 'ABU Gymnasium Court', fieldType: 'School Ground', priceBracket: 'Free', schoolId: abu.id, sportType: 'BASKETBALL', landmarkDescription: 'Main indoor basketball gym in Samaru.' },
+    { name: 'Suleiman Hall Pitch', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: abu.id, sportType: 'FOOTBALL', landmarkDescription: 'Open playing field near Suleiman Hall.' },
 
     // UNN (Nsukka)
-    { name: 'Akanu Ibiam Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: unn.id, landmarkDescription: 'Main UNN sports arena.' },
-    { name: 'Franco Pitch', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: unn.id, landmarkDescription: 'Popular field near the Eni-Njoku / Alvan Ikoku (Franco) hostels.' },
+    { name: 'Akanu Ibiam Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: unn.id, sportType: 'FOOTBALL', landmarkDescription: 'Main UNN sports arena.' },
+    { name: 'Akanu Ibiam Basketball Court', fieldType: 'School Ground', priceBracket: 'Free', schoolId: unn.id, sportType: 'BASKETBALL', landmarkDescription: 'Outdoor courts inside the stadium complex.' },
+    { name: 'Franco Pitch', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: unn.id, sportType: 'FOOTBALL', landmarkDescription: 'Popular field near the Eni-Njoku / Alvan Ikoku (Franco) hostels.' },
 
     // Covenant University
-    { name: 'CU Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: covenant.id, landmarkDescription: 'Premium turf and track inside Canaanland.' },
-    { name: 'PG Hall Court', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: covenant.id, landmarkDescription: 'Basketball courts near the postgraduate halls.' },
+    { name: 'CU Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: covenant.id, sportType: 'FOOTBALL', landmarkDescription: 'Premium turf and track inside Canaanland.' },
+    { name: 'Covenant Indoor Sports Hall', fieldType: 'School Ground', priceBracket: 'Free', schoolId: covenant.id, sportType: 'BASKETBALL', landmarkDescription: 'Premium indoor wood court.' },
+    { name: 'PG Hall Court', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: covenant.id, sportType: 'BASKETBALL', landmarkDescription: 'Basketball courts near the postgraduate halls.' },
 
     // UNILORIN
-    { name: 'UNILORIN Main Bowl', fieldType: 'School Ground', priceBracket: 'Free', schoolId: unilorin.id, landmarkDescription: 'Main stadium at the permanent site.' },
-    { name: 'San Rab Arena', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: unilorin.id, landmarkDescription: 'Popular off-campus student hub playing field in Tanke.' },
+    { name: 'UNILORIN Main Bowl', fieldType: 'School Ground', priceBracket: 'Free', schoolId: unilorin.id, sportType: 'FOOTBALL', landmarkDescription: 'Main stadium at the permanent site.' },
+    { name: 'UNILORIN Indoor Court', fieldType: 'School Ground', priceBracket: 'Free', schoolId: unilorin.id, sportType: 'BASKETBALL', landmarkDescription: 'Main basketball arena.' },
+    { name: 'San Rab Arena', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: unilorin.id, sportType: 'FOOTBALL', landmarkDescription: 'Popular off-campus student hub playing field in Tanke.' },
 
     // UNIBEN
-    { name: 'UNIBEN Sports Complex', fieldType: 'School Ground', priceBracket: 'Free', schoolId: uniben.id, landmarkDescription: 'Main stadium in Ugbowo Campus.' },
-    { name: 'Hall 3 Maracana', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: uniben.id, landmarkDescription: 'Legendary rough pitch beside Hall 3.' },
+    { name: 'UNIBEN Sports Complex', fieldType: 'School Ground', priceBracket: 'Free', schoolId: uniben.id, sportType: 'FOOTBALL', landmarkDescription: 'Main stadium in Ugbowo Campus.' },
+    { name: 'UNIBEN Sports Complex Court', fieldType: 'School Ground', priceBracket: 'Free', schoolId: uniben.id, sportType: 'BASKETBALL', landmarkDescription: 'Outdoor courts in the sports complex.' },
+    { name: 'Hall 3 Maracana', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: uniben.id, sportType: 'FOOTBALL', landmarkDescription: 'Legendary rough pitch beside Hall 3.' },
 
     // BUK
-    { name: 'BUK New Campus Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: buk.id, landmarkDescription: 'Main stadium at the new site.' },
-    { name: 'Ramat Hall Pitch', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: buk.id, landmarkDescription: 'Field near Ramat hostel in the old campus.' },
+    { name: 'BUK New Campus Stadium', fieldType: 'School Ground', priceBracket: 'Free', schoolId: buk.id, sportType: 'FOOTBALL', landmarkDescription: 'Main stadium at the new site.' },
+    { name: 'BUK New Campus Court', fieldType: 'School Ground', priceBracket: 'Free', schoolId: buk.id, sportType: 'BASKETBALL', landmarkDescription: 'Basketball courts near the new stadium.' },
+    { name: 'Ramat Hall Pitch', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: buk.id, sportType: 'FOOTBALL', landmarkDescription: 'Field near Ramat hostel in the old campus.' },
 
     // FUT Minna
-    { name: 'Gidan Kwano Sports Complex', fieldType: 'School Ground', priceBracket: 'Free', schoolId: futminna.id, landmarkDescription: 'Main arena at the permanent site.' },
-    { name: 'Bosso Campus Field', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: futminna.id, landmarkDescription: 'Playing ground at the older Bosso campus.' },
+    { name: 'Gidan Kwano Sports Complex', fieldType: 'School Ground', priceBracket: 'Free', schoolId: futminna.id, sportType: 'FOOTBALL', landmarkDescription: 'Main arena at the permanent site.' },
+    { name: 'Gidan Kwano Basketball Court', fieldType: 'School Ground', priceBracket: 'Free', schoolId: futminna.id, sportType: 'BASKETBALL', landmarkDescription: 'Outdoor courts near the hostels.' },
+    { name: 'Bosso Campus Field', fieldType: 'Street Arena', priceBracket: 'Free', schoolId: futminna.id, sportType: 'FOOTBALL', landmarkDescription: 'Playing ground at the older Bosso campus.' },
   ];
 
   for (const pitch of pitches) {
