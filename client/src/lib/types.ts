@@ -4,6 +4,7 @@ export type PitchVerificationStatus = "GHOST" | "COMMUNITY_VERIFIED" | string;
 export interface Pitch {
   id: string;
   name: string;
+  sportType?: SportType;
   description?: string;
   address?: string;
   area?: string;

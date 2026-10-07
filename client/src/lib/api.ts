@@ -90,6 +90,7 @@ export function normalizePitch(value: unknown): Pitch {
     address: String(record.address ?? record.locationName ?? record.location ?? "Location not listed"),
     area: typeof record.area === "string" ? record.area : undefined,
     city: typeof record.city === "string" ? record.city : undefined,
+    sportType: (String(record.sportType ?? "FOOTBALL").toUpperCase() as any),
     activeStatus: String(record.activeStatus ?? record.status ?? "DRY").toUpperCase(),
     verificationStatus: String(record.verificationStatus ?? record.verification ?? "GHOST").toUpperCase(),
     imageUrl: typeof record.imageUrl === "string" ? record.imageUrl : undefined,
