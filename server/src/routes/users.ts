@@ -9,7 +9,13 @@ userRouter.use(authMiddleware);
 
 const updateProfileSchema = z.object({
   alias: z.string().min(2).max(30).trim().optional(),
-  favoritePosition: z.string().max(50).optional(),
+  schoolId: z.number().int().positive().optional(),
+  footballPosition: z.enum(['GOALKEEPER', 'DEFENDER', 'MIDFIELDER', 'FORWARD']).optional(),
+  basketballPosition: z.enum(['GUARD', 'FORWARD', 'CENTER']).optional(),
+  heightCm: z.number().int().min(100).max(250).optional(),
+  weightKg: z.number().int().min(30).max(200).optional(),
+  primarySport: z.enum(['FOOTBALL', 'BASKETBALL']).optional(),
+  medicalInfo: z.string().max(500).optional(),
 });
 
 // GET /api/users/me
@@ -21,7 +27,12 @@ userRouter.get('/me', async (req: AuthRequest, res: Response) => {
         id: true,
         alias: true,
         schoolId: true,
-        favoritePosition: true,
+        footballPosition: true,
+        basketballPosition: true,
+        heightCm: true,
+        weightKg: true,
+        primarySport: true,
+        medicalInfo: true,
         reputationScore: true,
         matchesPlayed: true,
         goalsScored: true,
@@ -29,6 +40,7 @@ userRouter.get('/me', async (req: AuthRequest, res: Response) => {
         createdAt: true,
         school: { select: { name: true, institutionType: true } },
         _count: { select: { createdPitches: true } },
+        physicalHistory: { orderBy: { createdAt: 'desc' } },
       },
     });
 
@@ -58,17 +70,45 @@ userRouter.patch('/me', validate(updateProfileSchema), async (req: AuthRequest, 
       }
     }
 
+    if (updates.heightCm !== undefined || updates.weightKg !== undefined || updates.medicalInfo !== undefined) {
+      // Find the current user to see if it changed
+      const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+      if (
+        currentUser && 
+        (updates.heightCm !== undefined && updates.heightCm !== currentUser.heightCm ||
+         updates.weightKg !== undefined && updates.weightKg !== currentUser.weightKg ||
+         updates.medicalInfo !== undefined && updates.medicalInfo !== currentUser.medicalInfo)
+      ) {
+        await prisma.physicalStatHistory.create({
+          data: {
+            userId,
+            heightCm: updates.heightCm ?? currentUser.heightCm,
+            weightKg: updates.weightKg ?? currentUser.weightKg,
+            medicalInfo: updates.medicalInfo ?? currentUser.medicalInfo,
+          }
+        });
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: userId },
       data: updates,
       select: {
         id: true,
         alias: true,
-        favoritePosition: true,
+        schoolId: true,
+        footballPosition: true,
+        basketballPosition: true,
+        heightCm: true,
+        weightKg: true,
+        primarySport: true,
+        medicalInfo: true,
         reputationScore: true,
         matchesPlayed: true,
         goalsScored: true,
         manOfTheMatch: true,
+        school: { select: { name: true, institutionType: true } },
+        physicalHistory: { orderBy: { createdAt: 'desc' } },
       },
     });
 

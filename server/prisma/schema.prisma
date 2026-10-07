@@ -35,15 +35,32 @@ model User {
   lobbyMemberships LobbyMember[]
   banterMessages   BanterMessage[]
   pitchVotes       PitchVote[]
-  favoritePitches  FavoritePitch[]
+  favoritePitches    FavoritePitch[]
   footballPosition   FootballPosition?  @map("football_position")
   basketballPosition BasketballPosition? @map("basketball_position")
+  heightCm           Int?               @map("height_cm")
+  weightKg           Int?               @map("weight_kg")
+  primarySport       SportType          @default(FOOTBALL) @map("primary_sport")
+  medicalInfo        String?            @map("medical_info")
+  physicalHistory    PhysicalStatHistory[]
   matchStats         MatchStat[]
   matchConfirmations MatchConfirmation[]
   slashesReceived    SlashRecord[]      @relation("SlashedUser")
   slashesIssued      SlashRecord[]      @relation("SlashIssuer")
   crownBannedUntil   DateTime?          @map("crown_banned_until")
   matchResults       MatchResult[]      @relation("MatchResultSubmitter")
+}
+
+model PhysicalStatHistory {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heightCm    Int?     @map("height_cm")
+  weightKg    Int?     @map("weight_kg")
+  medicalInfo String?  @map("medical_info")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
 }
 
 model FavoritePitch {
