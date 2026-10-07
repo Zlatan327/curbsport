@@ -6,8 +6,7 @@ import { validate } from '../middleware/validate';
 
 export const pitchRouter = Router();
 
-// All pitch routes require auth
-pitchRouter.use(authMiddleware);
+// Public routes (read-only) and authenticated routes (mutations)
 
 const createPitchSchema = z.object({
   name: z.string().min(2).max(255).trim(),
@@ -42,9 +41,9 @@ pitchRouter.get('/schools/list', async (_req: Request, res: Response) => {
 });
 
 // GET /api/pitches?schoolId=X
-pitchRouter.get('/', async (req: AuthRequest, res: Response) => {
+pitchRouter.get('/', async (req: Request, res: Response) => {
   try {
-    const schoolId = req.query.schoolId ? parseInt(req.query.schoolId as string) : req.user!.schoolId;
+    const schoolId = req.query.schoolId ? parseInt(req.query.schoolId as string) : 1;
 
     const pitches = await prisma.pitch.findMany({
       where: { schoolId },
@@ -88,7 +87,7 @@ pitchRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/pitches (create pitch)
-pitchRouter.post('/', validate(createPitchSchema), async (req: AuthRequest, res: Response) => {
+pitchRouter.post('/', authMiddleware, validate(createPitchSchema), async (req: AuthRequest, res: Response) => {
   try {
     const data = req.body;
 
@@ -112,7 +111,7 @@ pitchRouter.post('/', validate(createPitchSchema), async (req: AuthRequest, res:
 });
 
 // PATCH /api/pitches/:id/status
-pitchRouter.patch('/:id/status', validate(updateStatusSchema), async (req: AuthRequest, res: Response) => {
+pitchRouter.patch('/:id/status', authMiddleware, validate(updateStatusSchema), async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const { activeStatus } = req.body;
@@ -130,7 +129,7 @@ pitchRouter.patch('/:id/status', validate(updateStatusSchema), async (req: AuthR
 });
 
 // POST /api/pitches/:id/vote
-pitchRouter.post('/:id/vote', validate(voteSchema), async (req: AuthRequest, res: Response) => {
+pitchRouter.post('/:id/vote', authMiddleware, validate(voteSchema), async (req: AuthRequest, res: Response) => {
   try {
     const pitchId = parseInt(req.params.id as string);
     const userId = req.user!.userId;

@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
@@ -7,7 +7,6 @@ import rateLimit from 'express-rate-limit';
 import { getIO } from '../lib/socket';
 
 export const banterRouter = Router();
-banterRouter.use(authMiddleware);
 
 // Rate limit banter: 1 message per 3 seconds
 const banterRateLimit = rateLimit({
@@ -20,8 +19,8 @@ const banterSchema = z.object({
   text: z.string().min(1).max(280).trim(),
 });
 
-// GET /api/banter?pitchId=X&cursor=Y
-banterRouter.get('/', async (req: AuthRequest, res: Response) => {
+// GET /api/banter?pitchId=X&cursor=Y (Public read)
+banterRouter.get('/', async (req: Request, res: Response) => {
   try {
     const pitchId = parseInt(req.query.pitchId as string);
     const cursor = req.query.cursor ? parseInt(req.query.cursor as string) : undefined;
@@ -54,7 +53,7 @@ banterRouter.get('/', async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/banter?pitchId=X
-banterRouter.post('/', banterRateLimit, validate(banterSchema), async (req: AuthRequest, res: Response) => {
+banterRouter.post('/', authMiddleware, banterRateLimit, validate(banterSchema), async (req: AuthRequest, res: Response) => {
   try {
     const pitchId = parseInt(req.query.pitchId as string);
     const userId = req.user!.userId;

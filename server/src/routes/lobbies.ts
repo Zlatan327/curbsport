@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
@@ -7,7 +7,6 @@ import { getIO } from '../lib/socket';
 import { LobbyStatus } from '@prisma/client';
 
 export const lobbyRouter = Router();
-lobbyRouter.use(authMiddleware);
 
 const createLobbySchema = z.object({
   pitchId: z.number().int().positive(),
@@ -16,8 +15,8 @@ const createLobbySchema = z.object({
   scheduledAt: z.string().datetime(),
 });
 
-// GET /api/lobbies?pitchId=X
-lobbyRouter.get('/', async (req: AuthRequest, res: Response) => {
+// GET /api/lobbies?pitchId=X (Public read)
+lobbyRouter.get('/', async (req: Request, res: Response) => {
   try {
     const pitchId = req.query.pitchId ? parseInt(req.query.pitchId as string) : undefined;
 
@@ -47,7 +46,7 @@ lobbyRouter.get('/', async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/lobbies
-lobbyRouter.post('/', validate(createLobbySchema), async (req: AuthRequest, res: Response) => {
+lobbyRouter.post('/', authMiddleware, validate(createLobbySchema), async (req: AuthRequest, res: Response) => {
   try {
     const { pitchId, teamName, maxPlayers, scheduledAt } = req.body;
     const userId = req.user!.userId;
@@ -92,7 +91,7 @@ lobbyRouter.post('/', validate(createLobbySchema), async (req: AuthRequest, res:
 });
 
 // POST /api/lobbies/:id/join
-lobbyRouter.post('/:id/join', async (req: AuthRequest, res: Response) => {
+lobbyRouter.post('/:id/join', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const lobbyId = parseInt(req.params.id as string);
     const userId = req.user!.userId;
@@ -147,7 +146,7 @@ lobbyRouter.post('/:id/join', async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/lobbies/:id/leave
-lobbyRouter.post('/:id/leave', async (req: AuthRequest, res: Response) => {
+lobbyRouter.post('/:id/leave', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const lobbyId = parseInt(req.params.id as string);
     const userId = req.user!.userId;
@@ -181,7 +180,7 @@ lobbyRouter.post('/:id/leave', async (req: AuthRequest, res: Response) => {
 });
 
 // PATCH /api/lobbies/:id/status (host only)
-lobbyRouter.patch('/:id/status', async (req: AuthRequest, res: Response) => {
+lobbyRouter.patch('/:id/status', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const lobbyId = parseInt(req.params.id as string);
     const userId = req.user!.userId;
