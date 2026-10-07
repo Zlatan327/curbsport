@@ -1,4 +1,4 @@
-import type { AuthResponse, AuthUser, BanterMessage, Lobby, Pitch } from "@/lib/types";
+import type { AuthResponse, AuthUser, BanterMessage, LeaderboardEntry, Lobby, Pitch, UserStats } from "@/lib/types";
 
 export const TOKEN_KEY = "inside-life-token";
 export const USER_KEY = "inside-life-user";
@@ -174,4 +174,31 @@ export function createLobby(payload: { pitchId: string; startsAt: string; maxPla
 
 export function joinLobby(lobbyId: string): Promise<unknown> {
   return apiFetch("/lobbies", { method: "POST", body: JSON.stringify({ lobbyId, action: "join" }) });
+}
+
+export async function getLeaderboard(pitchId: string, sportType: string = 'FOOTBALL'): Promise<LeaderboardEntry[]> {
+  const res = await apiFetch<{ leaderboard: LeaderboardEntry[] }>(
+    `/matches/leaderboard?pitchId=${encodeURIComponent(pitchId)}&sportType=${encodeURIComponent(sportType)}`
+  );
+  return res.leaderboard || [];
+}
+
+export async function getUserStats(userId: string): Promise<UserStats> {
+  return apiFetch<UserStats>(`/matches/stats/${encodeURIComponent(userId)}`);
+}
+
+export async function submitMatchResult(payload: {
+  lobbyId: number;
+  durationMins: number;
+  stats: Array<{ userId: number; goals?: number; assists?: number; cleanSheets?: number; saves?: number; tackles?: number; points?: number; rebounds?: number; steals?: number; blocks?: number; threePointers?: number }>;
+}): Promise<unknown> {
+  return apiFetch('/matches/result', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function confirmMatch(matchId: number, confirmed: boolean): Promise<unknown> {
+  return apiFetch(`/matches/${matchId}/confirm`, { method: 'POST', body: JSON.stringify({ confirmed }) });
+}
+
+export async function disputeMatch(matchId: number, reason: string): Promise<unknown> {
+  return apiFetch(`/matches/${matchId}/dispute`, { method: 'POST', body: JSON.stringify({ reason }) });
 }

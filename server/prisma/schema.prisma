@@ -36,6 +36,14 @@ model User {
   banterMessages   BanterMessage[]
   pitchVotes       PitchVote[]
   favoritePitches  FavoritePitch[]
+  footballPosition   FootballPosition?  @map("football_position")
+  basketballPosition BasketballPosition? @map("basketball_position")
+  matchStats         MatchStat[]
+  matchConfirmations MatchConfirmation[]
+  slashesReceived    SlashRecord[]      @relation("SlashedUser")
+  slashesIssued      SlashRecord[]      @relation("SlashIssuer")
+  crownBannedUntil   DateTime?          @map("crown_banned_until")
+  matchResults       MatchResult[]      @relation("MatchResultSubmitter")
 }
 
 model FavoritePitch {
@@ -70,6 +78,8 @@ model Pitch {
   banterMessages  BanterMessage[]
   votes           PitchVote[]
   favoritedBy     FavoritePitch[]
+  sportType       SportType @default(FOOTBALL) @map("sport_type")
+  matchResults    MatchResult[]
 }
 
 enum VerificationStatus {
@@ -96,6 +106,9 @@ model MatchLobby {
   scheduledAt DateTime    @map("scheduled_at")
   status      LobbyStatus @default(BUILDING)
   createdAt   DateTime    @default(now()) @map("created_at")
+
+  sportType   SportType @default(FOOTBALL) @map("sport_type")
+  matchResult MatchResult?
 
   members LobbyMember[]
 }
@@ -138,4 +151,108 @@ model PitchVote {
   votedAt DateTime @default(now()) @map("voted_at")
 
   @@unique([pitchId, userId])
+}
+
+enum SportType {
+  FOOTBALL
+  BASKETBALL
+}
+
+enum MatchResultStatus {
+  PENDING
+  CONFIRMED
+  DISPUTED
+  SLASHED
+}
+
+enum FootballPosition {
+  GOALKEEPER
+  DEFENDER
+  MIDFIELDER
+  FORWARD
+}
+
+enum BasketballPosition {
+  GUARD
+  FORWARD
+  CENTER
+}
+
+model MatchResult {
+  id            Int               @id @default(autoincrement())
+  lobbyId       Int               @unique @map("lobby_id")
+  lobby         MatchLobby        @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
+  pitchId       Int               @map("pitch_id")
+  pitch         Pitch             @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  submittedById Int               @map("submitted_by")
+  submittedBy   User              @relation("MatchResultSubmitter", fields: [submittedById], references: [id])
+  sportType     SportType         @map("sport_type")
+  status        MatchResultStatus @default(PENDING)
+  matchDate     DateTime          @map("match_date")
+  durationMins  Int               @map("duration_mins")
+  playerCount   Int               @map("player_count")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  stats         MatchStat[]
+  confirmations MatchConfirmation[]
+  slashRecords  SlashRecord[]
+
+  @@index([pitchId])
+  @@index([submittedById])
+}
+
+model MatchStat {
+  id            Int         @id @default(autoincrement())
+  matchResultId Int         @map("match_result_id")
+  matchResult   MatchResult @relation(fields: [matchResultId], references: [id], onDelete: Cascade)
+  userId        Int         @map("user_id")
+  user          User        @relation(fields: [userId], references: [id])
+  
+  // Football stats
+  goals         Int         @default(0)
+  assists       Int         @default(0)
+  cleanSheets   Int         @default(0) @map("clean_sheets")
+  saves         Int         @default(0)
+  tackles       Int         @default(0)
+  
+  // Basketball stats
+  points        Int         @default(0)
+  rebounds      Int         @default(0)
+  steals        Int         @default(0)
+  blocks        Int         @default(0)
+  threePointers Int         @default(0) @map("three_pointers")
+  
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@unique([matchResultId, userId])
+  @@index([userId])
+}
+
+model MatchConfirmation {
+  id            Int         @id @default(autoincrement())
+  matchResultId Int         @map("match_result_id")
+  matchResult   MatchResult @relation(fields: [matchResultId], references: [id], onDelete: Cascade)
+  userId        Int         @map("user_id")
+  user          User        @relation(fields: [userId], references: [id])
+  confirmed     Boolean
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@unique([matchResultId, userId])
+}
+
+model SlashRecord {
+  id              Int         @id @default(autoincrement())
+  matchResultId   Int         @map("match_result_id")
+  matchResult     MatchResult @relation(fields: [matchResultId], references: [id], onDelete: Cascade)
+  slashedUserId   Int         @map("slashed_user_id")
+  slashedUser     User        @relation("SlashedUser", fields: [slashedUserId], references: [id])
+  issuedByUserId  Int         @map("issued_by_user_id")
+  issuedBy        User        @relation("SlashIssuer", fields: [issuedByUserId], references: [id])
+  reason          String
+  repPenalty      Int         @map("rep_penalty")
+  statMultiplier  Float       @default(2.0) @map("stat_multiplier")
+  crownBanDays    Int         @default(14) @map("crown_ban_days")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  @@index([slashedUserId])
 }

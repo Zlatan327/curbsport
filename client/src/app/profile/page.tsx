@@ -5,6 +5,7 @@ import { ArrowUpRight, LogOut, MapPin, ShieldCheck, UserRound } from "lucide-rea
 import { AppFrame } from "@/components/app-frame";
 import { AsyncButton } from "@/components/async-button";
 import { Notice } from "@/components/notice";
+import { PlayerStats } from "@/components/player-stats";
 import { SignInPrompt } from "@/components/sign-in-prompt";
 import { useSchoolId } from "@/hooks/use-school-id";
 import { useAuthStore, userDisplayName } from "@/store/auth";
@@ -33,6 +34,7 @@ export default function ProfilePage() {
         <AsyncButton type="submit" variant="outline"><MapPin size={16} /> SAVE CAMPUS ID <ArrowUpRight size={16} /></AsyncButton>
         {saved && <Notice tone="success">Campus ID {schoolDraft} saved on this device.</Notice>}
       </form>
+      {user?.id && <PlayerStats userId={user.id} />}
       <button className="signout-button" type="button" onClick={signOut}><LogOut size={16} /> SIGN OUT</button>
       <p className="profile-note">JWT stays in this browser&apos;s localStorage and is sent as a Bearer token on API calls.</p>
     </>}

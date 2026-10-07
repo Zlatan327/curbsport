@@ -9,6 +9,7 @@ import { pitchRouter } from './routes/pitches';
 import { lobbyRouter } from './routes/lobbies';
 import { banterRouter } from './routes/banter';
 import { userRouter } from './routes/users';
+import { matchRouter } from './routes/matches';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -36,6 +37,7 @@ app.use('/api/pitches', pitchRouter);
 app.use('/api/lobbies', lobbyRouter);
 app.use('/api/banter', banterRouter);
 app.use('/api/users', userRouter);
+app.use('/api/matches', matchRouter);
 
 // Global error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

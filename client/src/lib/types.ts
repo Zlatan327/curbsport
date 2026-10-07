@@ -28,6 +28,9 @@ export interface AuthUser {
     institutionType?: string;
   };
   favoritePosition?: string;
+  footballPosition?: string;
+  basketballPosition?: string;
+  crownBannedUntil?: string;
   reputationScore?: number;
   matchesPlayed?: number;
   goalsScored?: number;
@@ -63,4 +66,83 @@ export interface Lobby {
 export interface AuthResponse {
   token: string;
   user: AuthUser;
+}
+
+export type SportType = "FOOTBALL" | "BASKETBALL";
+export type FootballPosition = "GOALKEEPER" | "DEFENDER" | "MIDFIELDER" | "FORWARD";
+export type BasketballPosition = "GUARD" | "FORWARD" | "CENTER";
+export type MatchResultStatus = "PENDING" | "CONFIRMED" | "DISPUTED" | "SLASHED";
+
+export interface MatchStat {
+  userId: number;
+  alias?: string;
+  goals: number;
+  assists: number;
+  cleanSheets: number;
+  saves: number;
+  tackles: number;
+  points: number;
+  rebounds: number;
+  steals: number;
+  blocks: number;
+  threePointers: number;
+}
+
+export interface LeaderboardEntry {
+  userId: number;
+  alias: string;
+  position?: string;
+  score: number;
+  goals?: number;
+  assists?: number;
+  cleanSheets?: number;
+  saves?: number;
+  tackles?: number;
+  points?: number;
+  rebounds?: number;
+  steals?: number;
+  blocks?: number;
+  threePointers?: number;
+  isKing?: boolean;
+  isBanned?: boolean;
+}
+
+export interface MatchResult {
+  id: number;
+  lobbyId: number;
+  pitchId: number;
+  status: MatchResultStatus;
+  sportType: SportType;
+  matchDate: string;
+  durationMins: number;
+  playerCount: number;
+  stats: MatchStat[];
+  confirmations?: number;
+  confirmationsNeeded?: number;
+}
+
+export interface UserStats {
+  userId: number;
+  alias: string;
+  reputationScore: number;
+  footballPosition?: FootballPosition;
+  basketballPosition?: BasketballPosition;
+  totalMatches: number;
+  football: {
+    goals: number;
+    assists: number;
+    cleanSheets: number;
+    saves: number;
+    tackles: number;
+  };
+  basketball: {
+    points: number;
+    rebounds: number;
+    steals: number;
+    blocks: number;
+    threePointers: number;
+  };
+  crowns: number;
+  isCrownBanned: boolean;
+  slashCount: number;
 }

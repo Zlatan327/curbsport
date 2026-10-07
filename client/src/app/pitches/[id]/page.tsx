@@ -10,6 +10,7 @@ import { Notice } from "@/components/notice";
 import { EmptyState, LoadingState } from "@/components/page-state";
 import { StatusBadge } from "@/components/status-badge";
 import { SignInPrompt } from "@/components/sign-in-prompt";
+import { StatKing } from "@/components/stat-king";
 import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
 import { createLobby, joinLobby, sendBanter, votePitch } from "@/lib/api";
@@ -132,6 +133,8 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
     {pitchError && !isDemo && <Notice tone="warning" className="offline-notice"><strong>API ERROR</strong><span>{pitchError.message}</span><button type="button" onClick={() => void refreshPitch()}>RETRY</button></Notice>}
 
     <section className="detail-stats"><div><strong>{pitch.playersNow || 0}</strong><span>ON THE GROUND</span></div><div><strong>{pitch.setsToday || 0}</strong><span>SETS TODAY</span></div><div><strong>{pitch.upvotes || 0}</strong><span>GROUND CHECKS</span></div></section>
+
+    <StatKing pitchId={id} isDemo={isDemo} />
 
     <div className="detail-tabs" role="tablist" aria-label="Pitch sections">
       {(["info", "sets", "banter"] as Tab[]).map((item) => <button type="button" key={item} role="tab" aria-selected={tab === item} className={tab === item ? "is-selected" : ""} onClick={() => { setTab(item); setActionError(""); setActionNote(""); }}>{item === "info" ? "INFO" : item === "sets" ? "SETS" : "BANTER"}{item === "sets" && <span>{lobbies.length}</span>}</button>)}
