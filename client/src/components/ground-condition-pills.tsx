@@ -7,6 +7,7 @@ import { sendBanter } from '@/lib/api';
 interface GroundConditionPillsProps {
   pitchId: string;
   pitchName: string;
+  sportType?: 'FOOTBALL' | 'BASKETBALL';
   isDemo?: boolean;
   token?: string | null;
   onConditionBroadcast?: (msg: string) => void;
@@ -19,7 +20,7 @@ interface ConditionTag {
   broadcastText: string;
 }
 
-const CONDITIONS: ConditionTag[] = [
+const FOOTBALL_CONDITIONS: ConditionTag[] = [
   {
     id: 'keeper_needed',
     label: 'KEEPER NEEDED',
@@ -52,13 +53,49 @@ const CONDITIONS: ConditionTag[] = [
   },
 ];
 
+const BASKETBALL_CONDITIONS: ConditionTag[] = [
+  {
+    id: 'ballers_needed',
+    label: 'PLAYERS NEEDED',
+    icon: '🏀',
+    broadcastText: '🏀 Court Alert: Ballers urgently needed on court for pickup game right now!',
+  },
+  {
+    id: 'surface_wet',
+    label: 'COURT SLIPPERY',
+    icon: '🌧️',
+    broadcastText: '🌧️ Court Alert: Court surface is wet/slippery after rain. Exercise caution.',
+  },
+  {
+    id: 'surface_dry',
+    label: 'COURT DRY',
+    icon: '☀️',
+    broadcastText: '☀️ Court Alert: Court surface is dry and clean for hoops.',
+  },
+  {
+    id: 'lights_on',
+    label: 'FLOODLIGHTS ON',
+    icon: '💡',
+    broadcastText: '💡 Court Alert: Floodlights are on! Night pickup runs can fly.',
+  },
+  {
+    id: 'gate_open',
+    label: 'GATE OPEN',
+    icon: '🚪',
+    broadcastText: '🚪 Court Alert: Court gate and security access open. Pull up freely.',
+  },
+];
+
 export function GroundConditionPills({
   pitchId,
   pitchName,
+  sportType = 'FOOTBALL',
   isDemo,
   token,
   onConditionBroadcast,
 }: GroundConditionPillsProps) {
+  const isBball = sportType === 'BASKETBALL';
+  const conditions = isBball ? BASKETBALL_CONDITIONS : FOOTBALL_CONDITIONS;
   const [activeReports, setActiveReports] = useState<{ [id: string]: number }>({});
   const [reportingId, setReportingId] = useState<string | null>(null);
 
@@ -122,7 +159,7 @@ export function GroundConditionPills({
     <div className="ground-conditions-bar">
       <span className="conditions-label">TOUCHLINE RADAR:</span>
       <div className="conditions-chips-scroll">
-        {CONDITIONS.map((cond) => {
+        {conditions.map((cond) => {
           const isReported = Boolean(activeReports[cond.id]);
           const isBusy = reportingId === cond.id;
 

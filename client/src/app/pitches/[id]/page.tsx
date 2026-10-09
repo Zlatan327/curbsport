@@ -364,6 +364,7 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
     <GroundConditionPills
       pitchId={id}
       pitchName={pitch.name}
+      sportType={isBasketball ? "BASKETBALL" : "FOOTBALL"}
       isDemo={isDemo}
       token={token}
       onConditionBroadcast={(msg) => {
@@ -405,20 +406,36 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
     {isDemo && <Notice tone="warning" className="offline-notice"><strong>SAMPLE PREVIEW</strong><span>This is demo content; connect the API for live pitch data and actions.</span></Notice>}
     {pitchError && !isDemo && <Notice tone="warning" className="offline-notice"><strong>API ERROR</strong><span>{pitchError.message}</span><button type="button" onClick={() => void refreshPitch()}>RETRY</button></Notice>}
 
-    <section className="detail-stats"><div><strong>{pitch.playersNow || 0}</strong><span>ON THE GROUND</span></div><div><strong>{pitch.setsToday || 0}</strong><span>SETS TODAY</span></div><div><strong>{pitch.upvotes || 0}</strong><span>GROUND CHECKS</span></div></section>
+    <section className="detail-stats">
+      <div><strong>{pitch.playersNow || 0}</strong><span>{isBasketball ? "ON THE COURT" : "ON THE GROUND"}</span></div>
+      <div><strong>{pitch.setsToday || 0}</strong><span>{isBasketball ? "RUNS TODAY" : "SETS TODAY"}</span></div>
+      <div><strong>{pitch.upvotes || 0}</strong><span>{isBasketball ? "COURT CHECKS" : "GROUND CHECKS"}</span></div>
+    </section>
 
-    <StatKing pitchId={id} isDemo={isDemo} />
+    <StatKing pitchId={id} isDemo={isDemo} sportType={isBasketball ? "BASKETBALL" : "FOOTBALL"} />
 
     <div className="detail-tabs" role="tablist" aria-label="Pitch sections">
-      {(["info", "sets", "banter"] as Tab[]).map((item) => <button type="button" key={item} role="tab" aria-selected={tab === item} className={tab === item ? "is-selected" : ""} onClick={() => { setTab(item); setActionError(""); setActionNote(""); }}>{item === "info" ? "INFO" : item === "sets" ? "SETS" : "BANTER"}{item === "sets" && <span>{lobbies.length}</span>}</button>)}
+      {(["info", "sets", "banter"] as Tab[]).map((item) => (
+        <button
+          type="button"
+          key={item}
+          role="tab"
+          aria-selected={tab === item}
+          className={tab === item ? "is-selected" : ""}
+          onClick={() => { setTab(item); setActionError(""); setActionNote(""); }}
+        >
+          {item === "info" ? "INFO" : item === "sets" ? (isBasketball ? "RUNS" : "SETS") : "BANTER"}
+          {item === "sets" && <span>{lobbies.length}</span>}
+        </button>
+      ))}
     </div>
 
     {actionError && <Notice tone="warning" className="detail-notice">{actionError}</Notice>}
     {actionNote && <Notice tone="success" className="detail-notice">{actionNote}</Notice>}
 
     {tab === "info" && <section className="tab-panel info-panel" role="tabpanel">
-      <div className="info-panel__heading"><p className="eyebrow">THE GROUND CHECK</p><h2>KNOW BEFORE<br /><em>YOU MOVE.</em></h2></div>
-      <p className="pitch-description">{pitch.description || pitch.landmarkDescription || "The local ground is on the board. Add a banter message or start a set to get the people moving."}</p>
+      <div className="info-panel__heading"><p className="eyebrow">{isBasketball ? "THE COURT CHECK" : "THE GROUND CHECK"}</p><h2>KNOW BEFORE<br /><em>YOU MOVE.</em></h2></div>
+      <p className="pitch-description">{pitch.description || pitch.landmarkDescription || (isBasketball ? "The local court is on the board. Add a chat message or start a run to get ballers moving." : "The local ground is on the board. Add a banter message or start a set to get the people moving.")}</p>
       <div className="info-location">
         <MapPin size={17} />
         <div style={{ flex: 1 }}>
@@ -434,18 +451,18 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
           <Navigation size={13} /> DIRECTIONS
         </a>
       </div>
-      {!verified && <div className="ghost-detail"><div><span>👻</span><div><strong>GHOST PITCH</strong><p>Community still needs to confirm this ground.</p></div></div><p className="ghost-detail__copy">Does ball fly here?</p></div>}
-      <div className="vote-box"><div><p className="eyebrow">COMMUNITY CHECK</p><strong>Been here? Verify the ground.</strong></div><div className="vote-actions"><button type="button" onClick={() => void handleVote(true)} disabled={voting || isDemo} aria-label="Confirm this pitch is real"><Check size={18} /> YES</button><button type="button" onClick={() => void handleVote(false)} disabled={voting || isDemo} aria-label="Report this pitch for checking"><X size={18} /> NO</button></div></div>
+      {!verified && <div className="ghost-detail"><div><span>👻</span><div><strong>GHOST {isBasketball ? "COURT" : "PITCH"}</strong><p>Community still needs to confirm this {isBasketball ? "court" : "ground"}.</p></div></div><p className="ghost-detail__copy">Does ball fly here?</p></div>}
+      <div className="vote-box"><div><p className="eyebrow">COMMUNITY CHECK</p><strong>Been here? Verify the {isBasketball ? "court" : "ground"}.</strong></div><div className="vote-actions"><button type="button" onClick={() => void handleVote(true)} disabled={voting || isDemo} aria-label={`Confirm this ${isBasketball ? "court" : "pitch"} is real`}><Check size={18} /> YES</button><button type="button" onClick={() => void handleVote(false)} disabled={voting || isDemo} aria-label={`Report this ${isBasketball ? "court" : "pitch"} for checking`}><X size={18} /> NO</button></div></div>
       {isDemo && <p className="demo-explainer">Voting is disabled for sample preview data.</p>}
       {!hydrated && <p className="demo-explainer">Checking player session…</p>}
     </section>}
 
     {tab === "sets" && <section className="tab-panel sets-panel" role="tabpanel">
-      <div className="section-heading"><div><p className="eyebrow">WHO DEY HOLD SET?</p><h2>GET IN PLAY.</h2></div><button type="button" className="icon-action" onClick={() => setShowCreate((value) => !value)} aria-expanded={showCreate}>{showCreate ? <X size={18} /> : <Plus size={18} />} <span>{showCreate ? "CLOSE" : "CREATE SET"}</span></button></div>
+      <div className="section-heading"><div><p className="eyebrow">{isBasketball ? "WHO DEY RUN SET?" : "WHO DEY HOLD SET?"}</p><h2>{isBasketball ? "GET IN RUN." : "GET IN PLAY."}</h2></div><button type="button" className="icon-action" onClick={() => setShowCreate((value) => !value)} aria-expanded={showCreate}>{showCreate ? <X size={18} /> : <Plus size={18} />} <span>{showCreate ? "CLOSE" : isBasketball ? "POST A RUN" : "CREATE SET"}</span></button></div>
       {lobbyError && <Notice tone="warning" className="inline-notice"><strong>SET PREVIEW</strong> Unable to load live lobbies. Sample sets are clearly labelled below.</Notice>}
-      {showCreate && <form className="lobby-create" onSubmit={handleCreateLobby}><div className="form-section-heading"><span>+</span><div><p className="eyebrow">CALL YOUR PEOPLE</p><h2>POST A SET</h2></div></div><label className="field"><span>SET NAME</span><input value={lobbyTitle} onChange={(event) => setLobbyTitle(event.target.value)} required maxLength={60} placeholder="Evening 5-a-side" /></label><label className="field"><span>KICK-OFF</span><input type="datetime-local" value={lobbyTime} onChange={(event) => setLobbyTime(event.target.value)} required /></label><label className="field"><span>PLAYER CAP</span><input type="number" value={lobbyPlayers} onChange={(event) => setLobbyPlayers(event.target.value)} min={2} max={30} required /></label><label className="field"><span>NOTE FOR THE SET <small>OPTIONAL</small></span><input value={lobbyNote} onChange={(event) => setLobbyNote(event.target.value)} placeholder="Keeper needed. Bring a dark jersey." maxLength={100} /></label><AsyncButton type="submit" busy={lobbyBusy === "create"} className="button--full">POST THE SET <ArrowUpRight size={16} /></AsyncButton></form>}
-      {lobbyLoading && !lobbyData && <LoadingState label="Calling the set list…" />}
-      {!lobbyLoading && lobbies.length === 0 && <EmptyState title="No set on this ground yet.">Create the first one and get the ball moving.</EmptyState>}
+      {showCreate && <form className="lobby-create" onSubmit={handleCreateLobby}><div className="form-section-heading"><span>+</span><div><p className="eyebrow">{isBasketball ? "CALL YOUR BALLERS" : "CALL YOUR PEOPLE"}</p><h2>{isBasketball ? "POST A RUN" : "POST A SET"}</h2></div></div><label className="field"><span>{isBasketball ? "RUN NAME" : "SET NAME"}</span><input value={lobbyTitle} onChange={(event) => setLobbyTitle(event.target.value)} required maxLength={60} placeholder={isBasketball ? "Evening 3v3 / 5v5 run" : "Evening 5-a-side"} /></label><label className="field"><span>KICK-OFF</span><input type="datetime-local" value={lobbyTime} onChange={(event) => setLobbyTime(event.target.value)} required /></label><label className="field"><span>PLAYER CAP</span><input type="number" value={lobbyPlayers} onChange={(event) => setLobbyPlayers(event.target.value)} min={2} max={30} required /></label><label className="field"><span>NOTE <small>OPTIONAL</small></span><input value={lobbyNote} onChange={(event) => setLobbyNote(event.target.value)} placeholder={isBasketball ? "Guards needed. Bring light/dark jersey." : "Keeper needed. Bring a dark jersey."} maxLength={100} /></label><AsyncButton type="submit" busy={lobbyBusy === "create"} className="button--full">{isBasketball ? "POST THE RUN" : "POST THE SET"} <ArrowUpRight size={16} /></AsyncButton></form>}
+      {lobbyLoading && !lobbyData && <LoadingState label={isBasketball ? "Calling the run list…" : "Calling the set list…"} />}
+      {!lobbyLoading && lobbies.length === 0 && <EmptyState title={isBasketball ? "No run on this court yet." : "No set on this ground yet."}>{isBasketball ? "Create the first run and get hoops flying." : "Create the first one and get the ball moving."}</EmptyState>}
       <div className="lobby-list">{lobbies.map((lobby) => {
         const isDemoLobby = lobby.id.startsWith("demo-") || isDemo;
         const players = Array.isArray(lobby.players) ? (lobby.players as LobbyPlayer[]) : [];
