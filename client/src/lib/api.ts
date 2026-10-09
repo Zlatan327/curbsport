@@ -129,6 +129,9 @@ export function normalizePitch(value: unknown): Pitch {
     activeStatus: String(record.activeStatus ?? record.status ?? "DRY").toUpperCase(),
     verificationStatus: String(record.verificationStatus ?? record.verification ?? "GHOST").toUpperCase(),
     imageUrl: typeof record.imageUrl === "string" ? record.imageUrl : undefined,
+    hasBallNow: Boolean(record.hasBallNow),
+    ballBroughtBy: typeof record.ballBroughtBy === "string" ? record.ballBroughtBy : undefined,
+    ballReportedAt: typeof record.ballReportedAt === "string" ? record.ballReportedAt : undefined,
     playersNow: Number(record.playersNow ?? stats.playersNow ?? stats.players ?? 0),
     setsToday: Number(record.setsToday ?? stats.setsToday ?? stats.sets ?? count.lobbies ?? 0),
     upvotes: Number(record.upvotes ?? stats.upvotes ?? record.confirmationCount ?? count.votes ?? 0),
@@ -154,6 +157,8 @@ export function normalizeMessages(value: unknown): BanterMessage[] {
       user: {
         id: (user.id as number | string) || undefined,
         alias: (user.alias as string) || (user.name as string) || "Player",
+        hasBall: Boolean(user.hasBall),
+        ballType: typeof user.ballType === "string" ? user.ballType : undefined,
       },
     };
   });
@@ -181,18 +186,28 @@ export function normalizeLobbies(value: unknown): Lobby[] {
         alias: String(rec.alias || rec.name || "Player"),
         reputationScore: Number(rec.reputationScore ?? 10),
         avatarUrl: typeof rec.avatarUrl === "string" ? rec.avatarUrl : undefined,
+        hasBall: Boolean(rec.hasBall),
+        ballType: typeof rec.ballType === "string" ? rec.ballType : undefined,
       };
     });
 
-    // Sort players by reputation descending (advantage: senior players lead the set)
-    players.sort((a, b) => (b.reputationScore ?? 0) - (a.reputationScore ?? 0));
+    // Sort players: Ball Owners get priority starter spots, then by reputation descending
+    players.sort((a, b) => {
+      if (a.hasBall && !b.hasBall) return -1;
+      if (!a.hasBall && b.hasBall) return 1;
+      return (b.reputationScore ?? 0) - (a.reputationScore ?? 0);
+    });
 
     const hostPlayer: LobbyPlayer | undefined = hostRec ? {
       id: hostRec.id !== undefined && hostRec.id !== null ? (typeof hostRec.id === "number" ? hostRec.id : String(hostRec.id)) : undefined,
       alias: String(hostRec.alias || "Host"),
       reputationScore: Number(hostRec.reputationScore ?? 10),
       avatarUrl: typeof hostRec.avatarUrl === "string" ? hostRec.avatarUrl : undefined,
+      hasBall: Boolean(hostRec.hasBall),
+      ballType: typeof hostRec.ballType === "string" ? hostRec.ballType : undefined,
     } : undefined;
+
+    const lobbyHasBall = Boolean(record.hasBall || hostPlayer?.hasBall || players.some((p) => p.hasBall));
 
     return {
       ...(record as Partial<Lobby>),
@@ -204,6 +219,7 @@ export function normalizeLobbies(value: unknown): Lobby[] {
       playerCount: Number(count ?? record.playerCount ?? players.length),
       players,
       host: hostPlayer,
+      hasBall: lobbyHasBall,
       note: typeof record.teamName === "string" ? record.teamName : (typeof record.note === "string" ? record.note : undefined),
       status: String(record.status ?? "BUILDING"),
     };
@@ -266,6 +282,17 @@ export async function updatePitchImage(pitchId: string | number, imageUrl: strin
   return normalizePitch(res.pitch || res);
 }
 
+export async function checkinBall(pitchId: string | number, hasBallNow: boolean = true): Promise<{ pitch: Pitch; message: string }> {
+  const res = await apiFetch<{ pitch: unknown; message: string }>(`/pitches/${encodeURIComponent(pitchId)}/ball-checkin`, {
+    method: "POST",
+    body: JSON.stringify({ hasBallNow }),
+  });
+  return {
+    pitch: normalizePitch(res.pitch || res),
+    message: res.message || "Ball check-in registered!",
+  };
+}
+
 export async function getBanter(pitchId: string): Promise<BanterMessage[]> {
   return normalizeMessages(await apiFetch<unknown>(`/banter?pitchId=${encodeURIComponent(pitchId)}`));
 }
@@ -281,7 +308,7 @@ export async function getLobbies(): Promise<Lobby[]> {
   return normalizeLobbies(await apiFetch<unknown>("/lobbies"));
 }
 
-export function createLobby(payload: { pitchId: string | number; startsAt: string; maxPlayers: number; note: string; title?: string }): Promise<unknown> {
+export function createLobby(payload: { pitchId: string | number; startsAt: string; maxPlayers: number; note: string; title?: string; hasBall?: boolean }): Promise<unknown> {
   const pitchIdNum = typeof payload.pitchId === "number" ? payload.pitchId : parseInt(payload.pitchId, 10);
   return apiFetch("/lobbies", {
     method: "POST",
@@ -292,6 +319,7 @@ export function createLobby(payload: { pitchId: string | number; startsAt: strin
       teamName: payload.title || payload.note,
       note: payload.note,
       maxPlayers: payload.maxPlayers,
+      hasBall: payload.hasBall,
     }),
   });
 }

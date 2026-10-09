@@ -15,6 +15,9 @@ export interface Pitch {
   activeStatus: PitchActiveStatus;
   verificationStatus: PitchVerificationStatus;
   imageUrl?: string;
+  hasBallNow?: boolean;
+  ballBroughtBy?: string;
+  ballReportedAt?: string;
   playersNow?: number;
   setsToday?: number;
   upvotes?: number;
@@ -44,6 +47,8 @@ export interface AuthUser {
   weightKg?: number;
   primarySport?: SportType;
   avatarUrl?: string;
+  hasBall?: boolean;
+  ballType?: string;
   lastSchoolChangeAt?: string;
   lastAliasChangeAt?: string;
   medicalInfo?: string;
@@ -71,6 +76,8 @@ export interface LobbyPlayer {
   alias?: string;
   reputationScore?: number;
   avatarUrl?: string;
+  hasBall?: boolean;
+  ballType?: string;
   position?: string;
   isHost?: boolean;
   isCaptain?: boolean;
@@ -87,6 +94,7 @@ export interface Lobby {
   players?: Array<LobbyPlayer | AuthUser | string>;
   host?: LobbyPlayer | AuthUser;
   hostUserId?: number;
+  hasBall?: boolean;
   note?: string;
   status?: string;
   [key: string]: unknown;

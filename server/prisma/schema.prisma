@@ -43,6 +43,8 @@ model User {
   primarySport       SportType          @default(FOOTBALL) @map("primary_sport")
   medicalInfo        String?            @map("medical_info")
   avatarUrl          String?            @map("avatar_url")
+  hasBall            Boolean            @default(false) @map("has_ball")
+  ballType           String?            @map("ball_type")
   lastSchoolChangeAt DateTime?          @map("last_school_change_at")
   lastAliasChangeAt  DateTime?          @map("last_alias_change_at")
   physicalHistory    PhysicalStatHistory[]
@@ -90,6 +92,9 @@ model Pitch {
   confirmationCount   Int                @default(0) @map("confirmation_count")
   imageUrl            String?            @map("image_url")
   activeStatus        PitchActiveStatus  @default(UNKNOWN) @map("active_status")
+  hasBallNow          Boolean            @default(false) @map("has_ball_now")
+  ballBroughtBy       String?            @map("ball_brought_by")
+  ballReportedAt      DateTime?          @map("ball_reported_at")
   createdById         Int?               @map("created_by")
   createdBy           User?              @relation("PitchCreator", fields: [createdById], references: [id])
   createdAt           DateTime           @default(now()) @map("created_at")
@@ -125,6 +130,7 @@ model MatchLobby {
   maxPlayers  Int         @default(10) @map("max_players")
   scheduledAt DateTime    @map("scheduled_at")
   status      LobbyStatus @default(BUILDING)
+  hasBall     Boolean     @default(false) @map("has_ball")
   createdAt   DateTime    @default(now()) @map("created_at")
 
   sportType   SportType @default(FOOTBALL) @map("sport_type")

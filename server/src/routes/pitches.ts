@@ -261,3 +261,99 @@ pitchRouter.patch('/:id/image', authMiddleware, validate(updateImageSchema), asy
   }
 });
 
+// POST /api/pitches/:id/ball-checkin (Ball Owner ground check-in with perks)
+const ballCheckinSchema = z.object({
+  hasBallNow: z.boolean().default(true),
+});
+
+pitchRouter.post('/:id/ball-checkin', authMiddleware, validate(ballCheckinSchema), async (req: AuthRequest, res: Response) => {
+  try {
+    const id = parseInt(req.params.id as string, 10);
+    const userId = req.user!.userId;
+    const { hasBallNow } = req.body;
+
+    const existing = await prisma.pitch.findUnique({
+      where: { id },
+      include: { school: { select: { name: true } } },
+    });
+    if (!existing) {
+      res.status(404).json({ error: 'Pitch not found' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    let updatedPitch;
+    if (hasBallNow) {
+      // Award ball owner +10 reputation score & flag user as ball owner
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          hasBall: true,
+          reputationScore: { increment: 10 },
+        },
+      });
+
+      updatedPitch = await prisma.pitch.update({
+        where: { id },
+        data: {
+          hasBallNow: true,
+          ballBroughtBy: user.alias,
+          ballReportedAt: new Date(),
+          activeStatus: 'LIVE', // Ball on ground brings match to life!
+        },
+      });
+
+      // Broadcast live alert to pitch room
+      getIO().to(`pitch:${id}`).emit('pitch:ball_spotted', {
+        pitchId: id,
+        hasBallNow: true,
+        ballBroughtBy: user.alias,
+        ballReportedAt: new Date(),
+        message: `${user.alias} dey ground with ball!`,
+      });
+
+      // Broadcast alert to whole campus
+      getIO().to(`school:${existing.schoolId}`).emit('ball:alert', {
+        pitchId: id,
+        pitchName: existing.name,
+        ballBroughtBy: user.alias,
+        message: `⚽ Match ball on ground at ${existing.name} (brought by ${user.alias})! Pull up!`,
+      });
+
+      res.json({
+        pitch: updatedPitch,
+        message: `Ball checked in! You've been recognized as Ball Owner at ${existing.name}. +10 Reputation awarded!`,
+      });
+    } else {
+      updatedPitch = await prisma.pitch.update({
+        where: { id },
+        data: {
+          hasBallNow: false,
+          ballBroughtBy: null,
+          ballReportedAt: null,
+        },
+      });
+
+      getIO().to(`pitch:${id}`).emit('pitch:ball_spotted', {
+        pitchId: id,
+        hasBallNow: false,
+        message: `Ball check-out recorded.`,
+      });
+
+      res.json({
+        pitch: updatedPitch,
+        message: 'Ball status reset.',
+      });
+    }
+  } catch (err) {
+    console.error('Ball checkin error:', err);
+    res.status(500).json({ error: 'Failed to record ball check-in' });
+  }
+});
+
+

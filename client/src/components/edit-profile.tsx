@@ -37,6 +37,10 @@ export function EditProfile() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Ball Owner & Match Equipment VIP
+  const [hasBall, setHasBall] = useState<boolean>(Boolean(user?.hasBall));
+  const [ballType, setBallType] = useState<string>(user?.ballType || '');
+
   // Compress image from gallery to lightweight base64
   function handleAvatarFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -137,6 +141,13 @@ export function EditProfile() {
       if (medicalInfo) payload.medicalInfo = medicalInfo;
       if (avatarPreview && avatarPreview !== user?.avatarUrl) {
         payload.avatarUrl = avatarPreview;
+      }
+
+      payload.hasBall = hasBall;
+      if (hasBall) {
+        payload.ballType = ballType.trim() || (primarySport === 'BASKETBALL' ? 'Basketball (Standard Size 7)' : 'Football (Match Size 5)');
+      } else {
+        payload.ballType = null;
       }
 
       const result = await updateProfile(payload);
@@ -376,6 +387,83 @@ export function EditProfile() {
             placeholder="e.g. Recovering from ACL strain, asthmatic... (Private on your card)"
           />
         </label>
+        
+        {/* Match Equipment / Ball Owner VIP Status */}
+        <div style={{
+          padding: '1.2rem',
+          background: hasBall ? 'linear-gradient(135deg, rgba(234, 179, 8, 0.12), rgba(0, 0, 0, 0.5))' : '#141714',
+          border: hasBall ? '1px solid rgba(234, 179, 8, 0.45)' : '1px solid #282e28',
+          borderRadius: '10px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.85rem',
+          transition: 'all 0.2s ease'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.3rem' }}>{primarySport === 'BASKETBALL' ? '🏀' : '⚽'}</span>
+                <strong style={{ fontSize: '0.95rem', fontWeight: 800, color: hasBall ? '#fde047' : '#fff', letterSpacing: '0.04em' }}>
+                  BALL OWNER STATUS (VIP / CHAIRMAN)
+                </strong>
+              </div>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#9ca3af', lineHeight: 1.4 }}>
+                Do you own a match ball you bring to games? Ball owners keep street & campus ball alive.
+              </p>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', paddingTop: '2px' }}>
+              <input
+                type="checkbox"
+                checked={hasBall}
+                onChange={(e) => setHasBall(e.target.checked)}
+                style={{ width: '20px', height: '20px', accentColor: '#eab308', cursor: 'pointer' }}
+              />
+            </label>
+          </div>
+
+          {hasBall && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.2rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#fbbf24', fontWeight: 700, marginBottom: '5px' }}>
+                  SPECIFY BALL DETAILS (BRAND / SPEC)
+                </label>
+                <input
+                  type="text"
+                  value={ballType}
+                  onChange={(e) => setBallType(e.target.value)}
+                  placeholder={primarySport === 'BASKETBALL' ? "e.g. Molten BG4500 Size 7 / Spalding NBA" : "e.g. Nike Premier League Size 5 / Adidas Tango Turf"}
+                  style={{
+                    width: '100%',
+                    background: '#1a1d1a',
+                    border: '1px solid #444',
+                    borderRadius: '6px',
+                    padding: '0.55rem 0.75rem',
+                    color: '#fff',
+                    fontSize: '0.85rem'
+                  }}
+                />
+              </div>
+
+              <div style={{
+                background: 'rgba(234, 179, 8, 0.08)',
+                border: '1px dashed rgba(234, 179, 8, 0.35)',
+                borderRadius: '8px',
+                padding: '0.75rem 0.9rem',
+                fontSize: '0.75rem',
+                color: '#e5e7eb',
+                lineHeight: 1.55
+              }}>
+                <strong style={{ color: '#fde047', display: 'block', marginBottom: '4px' }}>🔥 ACTIVE BALL OWNER PERKS:</strong>
+                <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                  <li><strong style={{ color: '#facc15' }}>No Bench Guarantee:</strong> Priority starter slot in match lobby squad sheets.</li>
+                  <li><strong style={{ color: '#facc15' }}>Live Radar Beacon:</strong> Check in at any pitch to turn it live with &quot;BALL ON GROUND&quot; broadcast.</li>
+                  <li><strong style={{ color: '#facc15' }}>+10 Rep Score:</strong> Instant reputation boost whenever you supply equipment.</li>
+                  <li><strong style={{ color: '#facc15' }}>VIP Gold Badge:</strong> Displayed on your player card, chat banter, and set lists.</li>
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
         
         <AsyncButton type="submit" variant="outline" busy={busy}>
           SAVE IDENTITY & POSITIONS <ArrowUpRight size={16} />

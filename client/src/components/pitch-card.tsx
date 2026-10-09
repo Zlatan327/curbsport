@@ -20,9 +20,16 @@ export function PitchCard({ pitch }: { pitch: Pitch }) {
           )}
           <div className="pitch-art__label">{isBasketball ? "HOOPS / BASKETBALL" : "INSIDE / PITCH LOG"}</div>
           <div className="pitch-art__number">{pitch.id.startsWith("demo-") ? `0${pitch.id.slice(-1)}` : "PITCH"}</div>
-          <div className="pitch-art__sticker">{pitch.activeStatus === "LIVE" ? "BALL\nIN PLAY" : isBasketball ? "PICKUP\nCOURT" : "LOCAL\nGROUND"}</div>
+          <div className="pitch-art__sticker">{pitch.hasBallNow ? (isBasketball ? "BALL ON\nCOURT 🔥" : "BALL DEY\nGROUND 🔥") : pitch.activeStatus === "LIVE" ? "BALL\nIN PLAY" : isBasketball ? "PICKUP\nCOURT" : "LOCAL\nGROUND"}</div>
           <div className="pitch-art__bottom">
-            <StatusBadge status={pitch.activeStatus} />
+            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+              <StatusBadge status={pitch.activeStatus} />
+              {pitch.hasBallNow && (
+                <span className="ball-card-beacon" title={`Ball brought by ${pitch.ballBroughtBy || "baller"}`}>
+                  <span className="ball-pulse-dot" /> {isBasketball ? "🏀 ON COURT" : "⚽ ON GROUND"}
+                </span>
+              )}
+            </div>
             <span className="pitch-art__arrow"><ArrowUpRight size={21} /></span>
           </div>
         </div>

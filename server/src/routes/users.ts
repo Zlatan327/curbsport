@@ -17,6 +17,8 @@ const updateProfileSchema = z.object({
   primarySport: z.enum(['FOOTBALL', 'BASKETBALL']).optional(),
   medicalInfo: z.string().max(500).optional(),
   avatarUrl: z.string().max(4_000_000).optional(),
+  hasBall: z.boolean().optional(),
+  ballType: z.string().max(100).optional(),
 });
 
 // GET /api/users/me
@@ -28,6 +30,8 @@ userRouter.get('/me', async (req: AuthRequest, res: Response) => {
         id: true,
         alias: true,
         avatarUrl: true,
+        hasBall: true,
+        ballType: true,
         schoolId: true,
         footballPosition: true,
         basketballPosition: true,
@@ -139,6 +143,8 @@ userRouter.patch('/me', validate(updateProfileSchema), async (req: AuthRequest, 
         id: true,
         alias: true,
         avatarUrl: true,
+        hasBall: true,
+        ballType: true,
         schoolId: true,
         footballPosition: true,
         basketballPosition: true,

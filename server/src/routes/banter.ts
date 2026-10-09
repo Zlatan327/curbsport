@@ -46,7 +46,7 @@ banterRouter.get('/', async (req: Request, res: Response) => {
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { alias: true, id: true } },
+        user: { select: { alias: true, id: true, hasBall: true, ballType: true, reputationScore: true, avatarUrl: true } },
       },
     });
 
@@ -94,7 +94,7 @@ banterRouter.post('/', authMiddleware, banterRateLimit, validate(banterSchema), 
     const message = await prisma.banterMessage.create({
       data: { pitchId, userId, text },
       include: {
-        user: { select: { alias: true, id: true } },
+        user: { select: { alias: true, id: true, hasBall: true, ballType: true, reputationScore: true, avatarUrl: true } },
       },
     });
 

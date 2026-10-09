@@ -13,7 +13,7 @@ import { SignInPrompt } from "@/components/sign-in-prompt";
 import { StatKing } from "@/components/stat-king";
 import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
-import { createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, votePitch } from "@/lib/api";
+import { checkinBall, createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, votePitch } from "@/lib/api";
 import type { BanterMessage, LobbyPlayer } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
@@ -44,6 +44,7 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
   const [actionError, setActionError] = useState("");
   const [actionNote, setActionNote] = useState("");
   const [voting, setVoting] = useState(false);
+  const [ballChecking, setBallChecking] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [lobbyBusy, setLobbyBusy] = useState("");
   const [banterBusy, setBanterBusy] = useState(false);
@@ -146,6 +147,23 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : "Vote could not be sent.");
     } finally { setVoting(false); }
+  }
+
+  async function handleBallCheckin(hasBallNow = true) {
+    if (!token) return setActionError("Log in before checking in match equipment.");
+    if (isDemo) return setActionError("Match equipment check-in is disabled in sample mode.");
+    setActionError(""); setActionNote(""); setBallChecking(true);
+    try {
+      await checkinBall(id, hasBallNow);
+      if (hasBallNow) {
+        setActionNote(isBasketball ? "🏀 You're the MVP! Ball checked in on court. +10 REP awarded!" : "⚽ You're the MVP! Match ball reported on ground. +10 REP awarded!");
+      } else {
+        setActionNote("Equipment status cleared.");
+      }
+      await refreshPitch();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Could not update ball status.");
+    } finally { setBallChecking(false); }
   }
 
   async function handleJoin(lobbyId: string) {
@@ -253,7 +271,7 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
         <p className="eyebrow">ANAMBRA / FIELD REPORT</p>
         <h1>{pitch.name}</h1>
         <p><MapPin size={14} /> {pitch.area || pitch.address || "Anambra State"}</p>
-        <div className="hero-actions-row">
+        <div className="hero-actions-row" style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" }}>
           <a
             href={directionsUrl}
             target="_blank"
@@ -263,9 +281,48 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
           >
             <Navigation size={14} /> GET DIRECTIONS (GOOGLE MAPS)
           </a>
+          <button
+            type="button"
+            className="ball-checkin-btn"
+            disabled={ballChecking || isDemo}
+            onClick={() => void handleBallCheckin(!pitch.hasBallNow)}
+            title="Check in with match equipment to alert campus and earn +10 REP"
+          >
+            {ballChecking ? (
+              <LoaderCircle className="spin" size={13} />
+            ) : isBasketball ? (
+              <span>🏀</span>
+            ) : (
+              <span>⚽</span>
+            )}
+            {pitch.hasBallNow
+              ? (isBasketball ? "BALL ON COURT (CONFIRMED)" : "BALL DEY GROUND (CONFIRMED)")
+              : (isBasketball ? "I DEY WITH BASKETBALL" : "I DEY GROUND WITH BALL")}
+          </button>
         </div>
       </div>
     </section>
+
+    {pitch.hasBallNow && (
+      <div className="hero-ball-beacon">
+        <span className="hero-ball-beacon__icon">{isBasketball ? "🏀" : "⚽"}</span>
+        <div className="hero-ball-beacon__body">
+          <strong>{isBasketball ? "BALL ON COURT RIGHT NOW!" : "MATCH BALL DEY GROUND RIGHT NOW!"}</strong>
+          <span>Brought by <strong>{pitch.ballBroughtBy || "a baller"}</strong> {pitch.ballReportedAt ? `• Spotted ${displayTime(pitch.ballReportedAt)}` : ""} • Game can fly!</span>
+        </div>
+        {token && user && pitch.ballBroughtBy === user.alias && (
+          <button
+            type="button"
+            className="button button--dark"
+            style={{ fontSize: "8px", padding: "4px 8px", minHeight: "26px", marginLeft: "auto" }}
+            disabled={ballChecking}
+            onClick={() => void handleBallCheckin(false)}
+          >
+            CLEAR
+          </button>
+        )}
+      </div>
+    )}
     {isDemo && <Notice tone="warning" className="offline-notice"><strong>SAMPLE PREVIEW</strong><span>This is demo content; connect the API for live pitch data and actions.</span></Notice>}
     {pitchError && !isDemo && <Notice tone="warning" className="offline-notice"><strong>API ERROR</strong><span>{pitchError.message}</span><button type="button" onClick={() => void refreshPitch()}>RETRY</button></Notice>}
 
@@ -321,11 +378,16 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
 
         return <article className="lobby-card" key={lobby.id}>
           <div className="lobby-card__top">
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
               <span className="lobby-open"><i /> OPEN SET</span>
               {isVerifiedSet && (
                 <span className="verified-set-badge" title={`Senior host with ${hostRep} reputation`}>
                   <Crown size={12} /> VERIFIED SET
+                </span>
+              )}
+              {lobby.hasBall && (
+                <span className="ball-provided-badge" title="Match equipment confirmed for this set">
+                  {isBasketball ? "🏀 BALL PROVIDED" : "⚽ BALL PROVIDED"}
                 </span>
               )}
             </div>
@@ -343,16 +405,18 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
             )}
           </div>
 
-          {/* Roster Sheet with Senior Man / Captain Advantage */}
+          {/* Roster Sheet with Senior Man & Ball Owner Advantage */}
           <div className="lobby-roster">
             <div className="lobby-roster__heading">
               <span>SQUAD LIST ({players.length}/{lobby.maxPlayers || 10})</span>
-              <small>ORDERED BY REPUTATION</small>
+              <small>ORDERED BY REPUTATION & BALL PRIORITY</small>
             </div>
             <div className="lobby-roster__list">
               {players.map((player: any, idx: number) => {
                 const pName = typeof player === "string" ? player : (player.alias || "Player");
                 const pRep = typeof player === "object" ? (player.reputationScore ?? 10) : 10;
+                const pHasBall = typeof player === "object" ? Boolean(player.hasBall) : false;
+                const pBallType = typeof player === "object" ? player.ballType : null;
                 const isCaptain = idx === 0 && players.length > 0;
                 const isSeniorMan = pRep >= 50;
                 return (
@@ -362,6 +426,11 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
                       <strong>{pName}</strong>
                       <span className="roster-player__rep">⭐ {pRep} REP</span>
                     </div>
+                    {pHasBall && (
+                      <span className="ball-owner-roster-pill" title={`Match Equipment VIP: ${pBallType || "Standard Ball"} (No-Bench Guarantee)`}>
+                        {isBasketball ? "🏀" : "⚽"} BALL OWNER
+                      </span>
+                    )}
                     {isCaptain && (
                       <span className="captain-pill" title="Set Captain (Highest reputation in squad)">
                         <Crown size={10} /> CAPTAIN
@@ -398,7 +467,27 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
       <div className="chat-window" aria-live="polite">
         {banterLoading && !banterData && !isDemo && <LoadingState label="Tuning into the ground…" />}
         {messages.length === 0 && <EmptyState title="Quiet on the touchline.">Drop the first message.</EmptyState>}
-        {messages.map((item, index) => <article className={`chat-message${index === 0 ? " chat-message--other" : " chat-message--other"}`} key={item.id}><div className="chat-message__avatar">{messageAuthor(item).slice(0, 1).toUpperCase()}</div><div className="chat-message__body"><div className="chat-message__meta"><strong>{messageAuthor(item)}</strong><span>{displayTime(item.createdAt)}</span></div><p>{item.message || item.text}</p></div></article>)}
+        {messages.map((item, index) => {
+          const author = messageAuthor(item);
+          const isAuthorBallOwner = typeof item.user === "object" ? Boolean((item.user as any)?.hasBall) : false;
+          return (
+            <article className={`chat-message${index === 0 ? " chat-message--other" : " chat-message--other"}`} key={item.id}>
+              <div className="chat-message__avatar">{author.slice(0, 1).toUpperCase()}</div>
+              <div className="chat-message__body">
+                <div className="chat-message__meta">
+                  <strong>{author}</strong>
+                  {isAuthorBallOwner && (
+                    <span className="chat-message__ball-owner" title="Match equipment owner">
+                      {isBasketball ? "🏀" : "⚽"} BALL OWNER
+                    </span>
+                  )}
+                  <span>{displayTime(item.createdAt)}</span>
+                </div>
+                <p>{item.message || item.text}</p>
+              </div>
+            </article>
+          );
+        })}
       </div>
       <div className="quick-chips"><p className="eyebrow">QUICK SHOUT</p>{QUICK_MESSAGES.map((text) => <button type="button" key={text} disabled={isDemo} onClick={() => void handleSend(text)}>{text}</button>)}</div>
       {isDemo && <Notice tone="warning" className="inline-notice">Sample messages only. Connect the API to send or receive live banter.</Notice>}

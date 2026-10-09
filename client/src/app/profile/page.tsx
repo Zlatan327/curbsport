@@ -65,6 +65,25 @@ export default function ProfilePage() {
           <p className="eyebrow">PLAYER / VERIFIED SESSION</p>
           <h2>{userDisplayName(user)}</h2>
           <p>{user?.alias || "Username linked to your account"}</p>
+          {user?.hasBall && (
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              marginTop: "6px",
+              background: "linear-gradient(90deg, #ca8a04, #eab308)",
+              color: "#000",
+              fontWeight: 800,
+              fontSize: "0.72rem",
+              padding: "3px 8px",
+              borderRadius: "4px",
+              letterSpacing: "0.04em",
+              boxShadow: "0 0 8px rgba(234, 179, 8, 0.4)"
+            }}>
+              <span>{user.primarySport === "BASKETBALL" ? "🏀" : "⚽"} BALL OWNER</span>
+              {user.ballType && <span style={{ opacity: 0.9, fontWeight: 600 }}>• {user.ballType}</span>}
+            </div>
+          )}
         </div>
         <ShieldCheck className="player-card__shield" size={21} />
       </section>

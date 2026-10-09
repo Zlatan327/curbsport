@@ -16,6 +16,7 @@ const createLobbySchema = z.object({
   maxPlayers: z.coerce.number().int().min(2).max(30).default(10),
   scheduledAt: z.string().optional(),
   startsAt: z.string().optional(),
+  hasBall: z.boolean().optional(),
 }).refine(data => Boolean(data.scheduledAt || data.startsAt), {
   message: 'Kick-off time (scheduledAt or startsAt) is required',
   path: ['scheduledAt'],
@@ -24,6 +25,7 @@ const createLobbySchema = z.object({
   teamName: data.teamName || data.title || data.note,
   maxPlayers: data.maxPlayers,
   scheduledAt: (data.scheduledAt || data.startsAt) as string,
+  hasBall: data.hasBall,
 }));
 
 // GET /api/lobbies?pitchId=X (Public read)
@@ -46,12 +48,14 @@ lobbyRouter.get('/', async (req: Request, res: Response) => {
             alias: true,
             reputationScore: true,
             avatarUrl: true,
+            hasBall: true,
+            ballType: true,
             primarySport: true,
             footballPosition: true,
             basketballPosition: true,
           },
         },
-        pitch: { select: { name: true, schoolId: true, sportType: true } },
+        pitch: { select: { name: true, schoolId: true, sportType: true, hasBallNow: true, ballBroughtBy: true } },
         _count: { select: { members: true } },
         members: {
           select: {
@@ -61,6 +65,8 @@ lobbyRouter.get('/', async (req: Request, res: Response) => {
                 alias: true,
                 reputationScore: true,
                 avatarUrl: true,
+                hasBall: true,
+                ballType: true,
                 primarySport: true,
                 footballPosition: true,
                 basketballPosition: true,
@@ -81,7 +87,7 @@ lobbyRouter.get('/', async (req: Request, res: Response) => {
 // POST /api/lobbies
 lobbyRouter.post('/', authMiddleware, validate(createLobbySchema), async (req: AuthRequest, res: Response) => {
   try {
-    const { pitchId, teamName, maxPlayers, scheduledAt } = req.body;
+    const { pitchId, teamName, maxPlayers, scheduledAt, hasBall } = req.body;
     const userId = req.user!.userId;
 
     const pitch = await prisma.pitch.findUnique({ where: { id: pitchId } });
@@ -89,6 +95,8 @@ lobbyRouter.post('/', authMiddleware, validate(createLobbySchema), async (req: A
       res.status(404).json({ error: 'Pitch not found' });
       return;
     }
+
+    const hostUser = await prisma.user.findUnique({ where: { id: userId } });
 
     const existingActiveHost = await prisma.matchLobby.findFirst({
       where: {
@@ -101,12 +109,15 @@ lobbyRouter.post('/', authMiddleware, validate(createLobbySchema), async (req: A
       return;
     }
 
+    const lobbyHasBall = Boolean(hasBall || hostUser?.hasBall);
+
     const lobby = await prisma.matchLobby.create({
       data: {
         pitchId,
         hostUserId: userId,
         teamName,
         maxPlayers,
+        hasBall: lobbyHasBall,
         scheduledAt: new Date(scheduledAt),
         members: {
           create: { userId }, // Host auto-joins
@@ -119,13 +130,15 @@ lobbyRouter.post('/', authMiddleware, validate(createLobbySchema), async (req: A
             alias: true,
             reputationScore: true,
             avatarUrl: true,
+            hasBall: true,
+            ballType: true,
             primarySport: true,
             footballPosition: true,
             basketballPosition: true,
           },
         },
         _count: { select: { members: true } },
-        pitch: { select: { schoolId: true, name: true, sportType: true } },
+        pitch: { select: { schoolId: true, name: true, sportType: true, hasBallNow: true, ballBroughtBy: true } },
         members: {
           select: {
             user: {
@@ -134,6 +147,8 @@ lobbyRouter.post('/', authMiddleware, validate(createLobbySchema), async (req: A
                 alias: true,
                 reputationScore: true,
                 avatarUrl: true,
+                hasBall: true,
+                ballType: true,
                 primarySport: true,
                 footballPosition: true,
                 basketballPosition: true,
@@ -208,6 +223,16 @@ lobbyRouter.post('/:id/join', authMiddleware, async (req: AuthRequest, res: Resp
 
     await prisma.lobbyMember.create({ data: { lobbyId, userId } });
 
+    const joiningUser = await prisma.user.findUnique({ where: { id: userId } });
+    let lobbyHasBall = (lobby as any).hasBall;
+    if (joiningUser?.hasBall && !lobbyHasBall) {
+      lobbyHasBall = true;
+      await prisma.matchLobby.update({
+        where: { id: lobbyId },
+        data: { hasBall: true },
+      });
+    }
+
     let newStatus: LobbyStatus = lobby.status;
     const newCount = lobby._count.members + 1;
     if (newCount >= lobby.maxPlayers) {
@@ -218,9 +243,9 @@ lobbyRouter.post('/:id/join', authMiddleware, async (req: AuthRequest, res: Resp
       });
     }
 
-    getIO().to(`pitch:${lobby.pitchId}`).emit('lobby:updated', { ...lobby, status: newStatus, _count: { members: newCount } });
+    getIO().to(`pitch:${lobby.pitchId}`).emit('lobby:updated', { ...lobby, hasBall: lobbyHasBall, status: newStatus, _count: { members: newCount } });
 
-    res.json({ message: 'Joined lobby', memberCount: newCount });
+    res.json({ message: 'Joined lobby', memberCount: newCount, hasBall: lobbyHasBall });
   } catch (err) {
     console.error('Join lobby error:', err);
     res.status(500).json({ error: 'Failed to join lobby' });
