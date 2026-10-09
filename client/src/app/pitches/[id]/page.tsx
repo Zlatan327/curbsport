@@ -24,7 +24,8 @@ import { useAuthStore } from "@/store/auth";
 
 type Tab = "info" | "sets" | "banter";
 
-const QUICK_MESSAGES = ["We dey ground!", "Any keeper dey?", "5-a-side?", "Be there soon"];
+const FOOTBALL_QUICK_MESSAGES = ["We dey ground!", "Any keeper dey?", "5-a-side?", "Light / Gen dey?", "I dey pull up now"];
+const BASKETBALL_QUICK_MESSAGES = ["We dey court!", "Set dey fly?", "Who hold ball?", "Light dey for court?", "I dey pull up now"];
 
 function messageAuthor(message: BanterMessage): string {
   return (message.author as string) || (typeof message.user === "string" ? message.user : (message.user?.alias as string)) || "Player";
@@ -711,9 +712,31 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
           );
         })}
       </div>
-      <div className="quick-chips"><p className="eyebrow">QUICK SHOUT</p>{QUICK_MESSAGES.map((text) => <button type="button" key={text} disabled={isDemo} onClick={() => void handleSend(text)}>{text}</button>)}</div>
+      <div className="quick-chips">
+        <p className="eyebrow">QUICK SHOUT</p>
+        {(isBasketball ? BASKETBALL_QUICK_MESSAGES : FOOTBALL_QUICK_MESSAGES).map((text) => (
+          <button type="button" key={text} disabled={isDemo} onClick={() => void handleSend(text)}>
+            {text}
+          </button>
+        ))}
+      </div>
       {isDemo && <Notice tone="warning" className="inline-notice">Sample messages only. Connect the API to send or receive live banter.</Notice>}
-      {!isDemo && token ? <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void handleSend(); }}><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Who dey hold set today?" maxLength={500} aria-label="Write a chat message" /><button type="submit" disabled={banterBusy || !message.trim()} aria-label="Send message">{banterBusy ? <LoaderCircle className="spin" size={18} /> : <Send size={18} />}</button></form> : !token ? <SignInPrompt title="Join the conversation." copy="Log in to message the players at this pitch." /> : null}
+      {!isDemo && token ? (
+        <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void handleSend(); }}>
+          <input
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            placeholder={isBasketball ? "Who dey run set today?" : "Who dey hold set today?"}
+            maxLength={500}
+            aria-label="Write a chat message"
+          />
+          <button type="submit" disabled={banterBusy || !message.trim()} aria-label="Send message">
+            {banterBusy ? <LoaderCircle className="spin" size={18} /> : <Send size={18} />}
+          </button>
+        </form>
+      ) : !token ? (
+        <SignInPrompt title="Join the conversation." copy="Log in to message the players at this pitch." />
+      ) : null}
       <p className="chat-footnote"><MessageCircle size={13} /> Keep the banter good. Respect the ground and the people on it.</p>
     </section>}
 
