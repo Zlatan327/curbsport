@@ -1000,4 +1000,61 @@ a { color: inherit; text-decoration: none; }
   border-radius: 3px;
 }
 
+/* ============================================================
+   WHATSAPP RALLY & SHARE STYLES
+   ============================================================ */
+
+.lobby-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.lobby-action-btn {
+  flex: 1;
+}
+
+.lobby-wa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #25d366;
+  background: rgba(37, 211, 102, 0.12);
+  color: #25d366;
+  font: 700 9px var(--font-display);
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+
+.lobby-wa-btn:hover {
+  background: #25d366;
+  color: #000;
+}
+
+.beacon-wa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  min-height: 26px;
+  border: 1px solid #25d366;
+  background: rgba(37, 211, 102, 0.15);
+  color: #25d366;
+  font: 700 8px var(--font-display);
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.beacon-wa-btn:hover {
+  background: #25d366;
+  color: #000;
+}
+
+
 

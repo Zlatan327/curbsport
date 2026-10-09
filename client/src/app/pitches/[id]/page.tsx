@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useRef, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Camera, Check, Clock3, Crown, LoaderCircle, MapPin, MessageCircle, Navigation, Plus, Send, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Camera, Check, Clock3, Crown, LoaderCircle, MapPin, MessageCircle, Navigation, Plus, Send, Share2, ShieldCheck, Users, X } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { AsyncButton } from "@/components/async-button";
 import { MapPlaceholder } from "@/components/map-placeholder";
@@ -14,6 +14,7 @@ import { StatKing } from "@/components/stat-king";
 import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
 import { checkinBall, createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, votePitch } from "@/lib/api";
+import { formatLobbyWhatsAppMessage, formatBallBeaconWhatsAppMessage, shareToWhatsApp } from "@/lib/share";
 import type { BanterMessage, LobbyPlayer } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
@@ -203,13 +204,49 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
         title: lobbyTitle.trim(),
         note: `${lobbyTitle.trim()}${lobbyNote.trim() ? ` — ${lobbyNote.trim()}` : ""}`,
       });
-      setActionNote("Set posted. Pull your people in.");
+      setActionNote("Set posted! Tap 'WHATSAPP RALLY' to pull your squad in.");
       setShowCreate(false);
       setLobbyTitle("Evening set"); setLobbyTime(""); setLobbyNote("");
       await refreshLobbies();
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : "Couldn't post that set.");
     } finally { setLobbyBusy(""); }
+  }
+
+  async function handleShareLobby(lobby: any) {
+    const players = Array.isArray(lobby.players) ? lobby.players : [];
+    const hostRep = (typeof lobby.host === "object" && lobby.host ? (lobby.host as any).reputationScore : 0) || 0;
+    const hostName = typeof lobby.host === "object" && lobby.host ? (lobby.host as any).alias : undefined;
+    const currentUrl = typeof window !== "undefined" ? window.location.href : `https://insidelife.vercel.app/pitches/${id}`;
+
+    const text = formatLobbyWhatsAppMessage({
+      pitchName: pitch?.name || "Local Ground",
+      pitchArea: pitch?.area || pitch?.address,
+      sportType: isBasketball ? "BASKETBALL" : "FOOTBALL",
+      lobbyTitle: lobby.title || "Pickup Set",
+      startsAt: lobby.startsAt ? displayTime(lobby.startsAt) : undefined,
+      playerCount: lobby.playerCount || players.length,
+      maxPlayers: lobby.maxPlayers || 10,
+      hasBall: Boolean(lobby.hasBall),
+      hostName,
+      hostRep,
+      pitchUrl: currentUrl,
+    });
+
+    await shareToWhatsApp(text);
+  }
+
+  async function handleShareBallBeacon() {
+    const currentUrl = typeof window !== "undefined" ? window.location.href : `https://insidelife.vercel.app/pitches/${id}`;
+    const text = formatBallBeaconWhatsAppMessage({
+      pitchName: pitch?.name || "Local Ground",
+      pitchArea: pitch?.area || pitch?.address,
+      sportType: isBasketball ? "BASKETBALL" : "FOOTBALL",
+      ballBroughtBy: pitch?.ballBroughtBy,
+      pitchUrl: currentUrl,
+    });
+
+    await shareToWhatsApp(text);
   }
 
   async function handleSend(messageValue = message) {
@@ -310,17 +347,27 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
           <strong>{isBasketball ? "BALL ON COURT RIGHT NOW!" : "MATCH BALL DEY GROUND RIGHT NOW!"}</strong>
           <span>Brought by <strong>{pitch.ballBroughtBy || "a baller"}</strong> {pitch.ballReportedAt ? `• Spotted ${displayTime(pitch.ballReportedAt)}` : ""} • Game can fly!</span>
         </div>
-        {token && user && pitch.ballBroughtBy === user.alias && (
+        <div style={{ marginLeft: "auto", display: "flex", gap: "6px", alignItems: "center" }}>
           <button
             type="button"
-            className="button button--dark"
-            style={{ fontSize: "8px", padding: "4px 8px", minHeight: "26px", marginLeft: "auto" }}
-            disabled={ballChecking}
-            onClick={() => void handleBallCheckin(false)}
+            className="beacon-wa-btn"
+            onClick={() => void handleShareBallBeacon()}
+            title="Broadcast equipment status to WhatsApp group"
           >
-            CLEAR
+            <Share2 size={12} /> <span>BROADCAST</span>
           </button>
-        )}
+          {token && user && pitch.ballBroughtBy === user.alias && (
+            <button
+              type="button"
+              className="button button--dark"
+              style={{ fontSize: "8px", padding: "4px 8px", minHeight: "26px" }}
+              disabled={ballChecking}
+              onClick={() => void handleBallCheckin(false)}
+            >
+              CLEAR
+            </button>
+          )}
+        </div>
       </div>
     )}
     {isDemo && <Notice tone="warning" className="offline-notice"><strong>SAMPLE PREVIEW</strong><span>This is demo content; connect the API for live pitch data and actions.</span></Notice>}
@@ -450,11 +497,25 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
             </div>
           </div>
 
-          {isJoined ? (
-            <button type="button" className="button button--outline button--full lobby-join" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleLeave(lobby.id)}>{lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <X size={16} />} LEAVE THE SET</button>
-          ) : (
-            <button type="button" className="button button--green button--full lobby-join" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleJoin(lobby.id)}>{lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <Users size={16} />} JOIN THE SET <ArrowUpRight size={16} /></button>
-          )}
+          <div className="lobby-actions-row">
+            {isJoined ? (
+              <button type="button" className="button button--outline lobby-action-btn" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleLeave(lobby.id)}>
+                {lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <X size={16} />} LEAVE SET
+              </button>
+            ) : (
+              <button type="button" className="button button--green lobby-action-btn" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleJoin(lobby.id)}>
+                {lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <Users size={16} />} JOIN SET <ArrowUpRight size={16} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="lobby-wa-btn"
+              onClick={() => void handleShareLobby(lobby)}
+              title="Share set roster callout to WhatsApp group"
+            >
+              <Share2 size={14} /> <span>WHATSAPP RALLY</span>
+            </button>
+          </div>
           {isDemoLobby && <p className="demo-explainer">Connect to the API to join live sets.</p>}
         </article>;
       })}</div>
