@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useRef, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Camera, Check, Clock3, Crown, LoaderCircle, MapPin, MessageCircle, Navigation, Plus, Send, Share2, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Camera, Check, Clock3, Crown, LoaderCircle, MapPin, MessageCircle, Navigation, Plus, Send, Share2, ShieldCheck, Swords, Users, X } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { AsyncButton } from "@/components/async-button";
 import { MapPlaceholder } from "@/components/map-placeholder";
@@ -15,6 +15,7 @@ import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
 import { checkinBall, createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, votePitch } from "@/lib/api";
 import { formatLobbyWhatsAppMessage, formatBallBeaconWhatsAppMessage, shareToWhatsApp } from "@/lib/share";
+import { balanceSquad, formatBalancedSquadWhatsAppMessage } from "@/lib/balancer";
 import type { BanterMessage, LobbyPlayer } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
@@ -48,6 +49,7 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
   const [ballChecking, setBallChecking] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [lobbyBusy, setLobbyBusy] = useState("");
+  const [balancedLobbyId, setBalancedLobbyId] = useState<string | null>(null);
   const [banterBusy, setBanterBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -243,6 +245,21 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
       pitchArea: pitch?.area || pitch?.address,
       sportType: isBasketball ? "BASKETBALL" : "FOOTBALL",
       ballBroughtBy: pitch?.ballBroughtBy,
+      pitchUrl: currentUrl,
+    });
+
+    await shareToWhatsApp(text);
+  }
+
+  async function handleShareBalancedSquad(lobby: any) {
+    const players = Array.isArray(lobby.players) ? lobby.players : [];
+    const balanced = balanceSquad(players, isBasketball ? "BASKETBALL" : "FOOTBALL");
+    const currentUrl = typeof window !== "undefined" ? window.location.href : `https://insidelife.vercel.app/pitches/${id}`;
+    const text = formatBalancedSquadWhatsAppMessage({
+      pitchName: pitch?.name || "Local Ground",
+      sportType: isBasketball ? "BASKETBALL" : "FOOTBALL",
+      teamA: balanced.teamA,
+      teamB: balanced.teamB,
       pitchUrl: currentUrl,
     });
 
@@ -496,6 +513,86 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
               )}
             </div>
           </div>
+
+          {/* Squad Balancer (Shirt vs Up-Body / Team A vs Team B) */}
+          {players.length >= 2 && (
+            <div className="squad-balancer-section">
+              <button
+                type="button"
+                className="squad-balancer-toggle"
+                onClick={() => setBalancedLobbyId(balancedLobbyId === lobby.id ? null : lobby.id)}
+              >
+                <Swords size={13} />
+                <span>{balancedLobbyId === lobby.id ? "HIDE BALANCED LINEUPS" : isBasketball ? "⚡ BALANCE SQUADS (WHITE VS DARK)" : "⚡ BALANCE SQUADS (SHIRT VS NO-SHIRT)"}</span>
+              </button>
+
+              {balancedLobbyId === lobby.id && (() => {
+                const balanced = balanceSquad(players, isBasketball ? "BASKETBALL" : "FOOTBALL");
+                return (
+                  <div className="balanced-squads-card">
+                    <div className="balanced-squads-header">
+                      <strong>TACTICAL SQUAD SPLIT</strong>
+                      <small>BALANCED BY REPUTATION & POSITIONS</small>
+                    </div>
+
+                    <div className="balanced-teams-grid">
+                      {/* Team A */}
+                      <div className="balanced-team-col balanced-team--a">
+                        <div className="balanced-team-title">
+                          <span>{balanced.teamA.badge} {balanced.teamA.name}</span>
+                          <span className="team-avg-rep">Avg ⭐{balanced.teamA.avgRep}</span>
+                        </div>
+                        <div className="balanced-team-list">
+                          {balanced.teamA.players.map((p: any, i: number) => {
+                            const name = typeof p === "string" ? p : p.alias || "Player";
+                            const rep = typeof p === "object" ? (p.reputationScore ?? 10) : 10;
+                            const pos = typeof p === "object" ? (isBasketball ? p.basketballPosition : p.footballPosition) || p.favoritePosition : null;
+                            return (
+                              <div key={`ta-${i}`} className="balanced-player-row">
+                                <span className="player-name">{name}</span>
+                                {pos && <span className="player-pos">{pos.slice(0, 3)}</span>}
+                                <span className="player-rep">⭐{rep}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Team B */}
+                      <div className="balanced-team-col balanced-team--b">
+                        <div className="balanced-team-title">
+                          <span>{balanced.teamB.badge} {balanced.teamB.name}</span>
+                          <span className="team-avg-rep">Avg ⭐{balanced.teamB.avgRep}</span>
+                        </div>
+                        <div className="balanced-team-list">
+                          {balanced.teamB.players.map((p: any, i: number) => {
+                            const name = typeof p === "string" ? p : p.alias || "Player";
+                            const rep = typeof p === "object" ? (p.reputationScore ?? 10) : 10;
+                            const pos = typeof p === "object" ? (isBasketball ? p.basketballPosition : p.footballPosition) || p.favoritePosition : null;
+                            return (
+                              <div key={`tb-${i}`} className="balanced-player-row">
+                                <span className="player-name">{name}</span>
+                                {pos && <span className="player-pos">{pos.slice(0, 3)}</span>}
+                                <span className="player-rep">⭐{rep}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="balanced-share-wa-btn"
+                      onClick={() => void handleShareBalancedSquad(lobby)}
+                    >
+                      <Share2 size={13} /> <span>SHARE BALANCED LINEUPS TO WHATSAPP</span>
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           <div className="lobby-actions-row">
             {isJoined ? (

@@ -1056,5 +1056,163 @@ a { color: inherit; text-decoration: none; }
   color: #000;
 }
 
+/* ============================================================
+   SQUAD BALANCER (SHIRT VS NO-SHIRT) STYLES
+   ============================================================ */
+
+.squad-balancer-section {
+  margin: 10px 0;
+}
+
+.squad-balancer-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px dashed rgba(0, 255, 102, 0.4);
+  background: rgba(0, 255, 102, 0.04);
+  color: var(--turf);
+  font: 700 8px var(--font-display);
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.squad-balancer-toggle:hover {
+  background: rgba(0, 255, 102, 0.12);
+  border-color: var(--turf);
+}
+
+.balanced-squads-card {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid rgba(240, 240, 232, 0.18);
+  background: #101310;
+}
+
+.balanced-squads-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(240, 240, 232, 0.1);
+}
+
+.balanced-squads-header strong {
+  font: 800 9px var(--font-display);
+  color: #fff;
+  letter-spacing: .06em;
+}
+
+.balanced-squads-header small {
+  color: var(--smoke);
+  font-size: 7px;
+  font-weight: 600;
+}
+
+.balanced-teams-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.balanced-team-col {
+  padding: 8px;
+  border: 1px solid rgba(240, 240, 232, 0.08);
+  background: #161a16;
+}
+
+.balanced-team--a {
+  border-left: 2px solid var(--turf);
+}
+
+.balanced-team--b {
+  border-left: 2px solid var(--caution);
+}
+
+.balanced-team-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font: 700 8px var(--font-display);
+}
+
+.balanced-team--a .balanced-team-title span:first-child {
+  color: var(--turf);
+}
+
+.balanced-team--b .balanced-team-title span:first-child {
+  color: var(--caution);
+}
+
+.team-avg-rep {
+  color: var(--smoke);
+  font-size: 7px;
+}
+
+.balanced-team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.balanced-player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 3px 5px;
+  background: #1c211c;
+  font-size: 9px;
+}
+
+.player-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.player-pos {
+  font-size: 7px;
+  color: var(--smoke);
+  padding: 1px 3px;
+  background: #252c25;
+  border-radius: 2px;
+}
+
+.player-rep {
+  color: var(--turf);
+  font: 700 7px var(--font-display);
+}
+
+.balanced-share-wa-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #25d366;
+  background: rgba(37, 211, 102, 0.15);
+  color: #25d366;
+  font: 700 8px var(--font-display);
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.balanced-share-wa-btn:hover {
+  background: #25d366;
+  color: #000;
+}
+
+
 
 
