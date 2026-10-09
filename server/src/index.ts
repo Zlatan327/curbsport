@@ -28,19 +28,26 @@ try {
 // Security middleware
 app.use(helmet());
 
-const allowedOrigins = process.env.CLIENT_URL
+// Trust reverse proxies (Render, Vercel, Railway, etc.)
+app.set('trust proxy', 1);
+
+const configuredOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(',').map((o) => o.trim())
   : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+const isAllowedOrigin = (origin: string | undefined): boolean => {
+  if (!origin) return true;
+  if (configuredOrigins.includes(origin)) return true;
+  if (origin === 'https://insidelife.vercel.app') return true;
+  if (origin.endsWith('.vercel.app')) return true;
+  if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
+  return false;
+};
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, server-to-server) or matching allowed origins
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:'))
-      ) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
       } else {
         callback(new Error(`CORS blocked request from origin: ${origin}`));

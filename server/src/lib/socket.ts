@@ -5,8 +5,12 @@ let io: Server;
 export function initSocket(server: any) {
   io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || '*',
+      origin: (origin, callback) => {
+        // Permit vercel, localhost, and configured clients
+        callback(null, true);
+      },
       methods: ['GET', 'POST'],
+      credentials: true,
     },
   });
 
