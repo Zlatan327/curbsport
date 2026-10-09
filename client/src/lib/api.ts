@@ -3,8 +3,10 @@ import type { AuthResponse, AuthUser, BanterMessage, LeaderboardEntry, Lobby, Lo
 export const TOKEN_KEY = "inside-life-token";
 export const USER_KEY = "inside-life-user";
 export const CITY_ID_KEY = "inside-life-city-id";
-export const DEFAULT_CITY_ID = process.env.NEXT_PUBLIC_DEFAULT_CITY_ID || "1";
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").replace(/\/$/, "");
+export const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "production" ? "https://insidelife.onrender.com/api" : "http://localhost:4000/api")
+).replace(/\/$/, "");
 
 export class ApiError extends Error {
   status: number;
