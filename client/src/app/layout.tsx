@@ -4,13 +4,50 @@ import { AppProviders } from "@/components/app-providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://insidelife.vercel.app"),
   title: {
-    default: "Inside Life — Find Your Ground",
+    default: "Inside Life — Live Pickup Sports & Ground Radar",
     template: "%s · Inside Life",
   },
-  description: "Find local football grounds, build a set, and put your people on the pitch in Anambra State.",
-  applicationName: "Inside Life: Sports Edition",
-  icons: { icon: "/icon.svg" },
+  description:
+    "Find verified football pitches & basketball courts, check live ball radar ('Ball Dey Ground'), rally match sets, and pull up to play across your campus.",
+  applicationName: "Inside Life",
+  keywords: [
+    "pickup football",
+    "basketball courts",
+    "campus sports",
+    "inside life",
+    "ball dey ground",
+    "street ball",
+    "match lobbies",
+    "UNIZIK",
+    "Nigeria",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_NG",
+    url: "https://insidelife.vercel.app",
+    siteName: "Inside Life",
+    title: "Inside Life — Live Pickup Sports & Ground Radar",
+    description:
+      "Find verified football pitches & basketball courts, check live ball radar ('Ball Dey Ground'), rally match sets, and pull up to play across your campus.",
+    images: [
+      {
+        url: "/icon.svg",
+        width: 512,
+        height: 512,
+        alt: "Inside Life — Live Pickup Sports & Ground Radar",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Inside Life — Live Pickup Sports & Ground Radar",
+    description:
+      "Find verified football pitches & basketball courts, check live ball radar ('Ball Dey Ground'), rally match sets, and pull up to play across your campus.",
+    images: ["/icon.svg"],
+  },
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
 };
 
 export const viewport: Viewport = {

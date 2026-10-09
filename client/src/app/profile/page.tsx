@@ -52,7 +52,7 @@ export default function ProfilePage() {
 
   return <AppFrame>
     <section className="page-intro page-intro--profile"><p className="eyebrow">THE PLAYER CARD</p><h1>YOUR<br /><em>SIDE.</em></h1><p>Make your home ground yours.</p></section>
-    {!hydrated ? <div className="sign-in-loading">Checking player session...</div> : !token ? <SignInPrompt title="Your people are waiting." copy="Sign in to set your home campus and join local football sets." /> : <>
+    {!hydrated ? <div className="sign-in-loading">Checking player session...</div> : !token ? <SignInPrompt title="Your people are waiting." copy="Sign in to set your home campus and join local pickup sets." /> : <>
       <section className="player-card">
         <div className="player-card__stamp" style={{ overflow: "hidden", padding: 0 }}>
           {user?.avatarUrl ? (
