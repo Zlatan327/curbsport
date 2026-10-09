@@ -48,6 +48,15 @@ authRouter.post('/register', validate(registerSchema), async (req: Request, res:
       select: {
         id: true,
         alias: true,
+        avatarUrl: true,
+        hasBall: true,
+        ballType: true,
+        primarySport: true,
+        footballPosition: true,
+        basketballPosition: true,
+        heightCm: true,
+        weightKg: true,
+        medicalInfo: true,
         schoolId: true,
         favoritePosition: true,
         reputationScore: true,
@@ -79,7 +88,10 @@ authRouter.post('/login', validate(loginSchema), async (req: Request, res: Respo
 
     const user = await prisma.user.findUnique({
       where: { alias },
-      include: { school: { select: { name: true, institutionType: true } } },
+      include: {
+        school: { select: { name: true, institutionType: true } },
+        physicalHistory: { orderBy: { createdAt: 'desc' } },
+      },
     });
 
     if (!user) {
@@ -104,13 +116,24 @@ authRouter.post('/login', validate(loginSchema), async (req: Request, res: Respo
       user: {
         id: user.id,
         alias: user.alias,
+        avatarUrl: user.avatarUrl,
+        hasBall: user.hasBall,
+        ballType: user.ballType,
+        primarySport: user.primarySport,
+        footballPosition: user.footballPosition,
+        basketballPosition: user.basketballPosition,
+        heightCm: user.heightCm,
+        weightKg: user.weightKg,
+        medicalInfo: user.medicalInfo,
         schoolId: user.schoolId,
         favoritePosition: user.favoritePosition,
         reputationScore: user.reputationScore,
         matchesPlayed: user.matchesPlayed,
         goalsScored: user.goalsScored,
         manOfTheMatch: user.manOfTheMatch,
+        createdAt: user.createdAt,
         school: user.school,
+        physicalHistory: user.physicalHistory,
       },
     });
   } catch (err) {
@@ -127,6 +150,15 @@ authRouter.get('/me', authMiddleware, async (req: AuthRequest, res: Response) =>
       select: {
         id: true,
         alias: true,
+        avatarUrl: true,
+        hasBall: true,
+        ballType: true,
+        primarySport: true,
+        footballPosition: true,
+        basketballPosition: true,
+        heightCm: true,
+        weightKg: true,
+        medicalInfo: true,
         schoolId: true,
         favoritePosition: true,
         reputationScore: true,
@@ -139,7 +171,8 @@ authRouter.get('/me', authMiddleware, async (req: AuthRequest, res: Response) =>
           include: {
             pitch: true
           }
-        }
+        },
+        physicalHistory: { orderBy: { createdAt: 'desc' } },
       },
     });
 

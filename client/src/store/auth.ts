@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { clearSessionStorage, saveSession, TOKEN_KEY, USER_KEY } from "@/lib/api";
+import { clearSessionStorage, fetchMe, saveSession, TOKEN_KEY, USER_KEY } from "@/lib/api";
 import type { AuthUser } from "@/lib/types";
 
 interface AuthState {
@@ -26,10 +26,33 @@ export const useAuthStore = create<AuthState>((set) => ({
       window.localStorage.removeItem(USER_KEY);
     }
     set({ token, user, hydrated: true });
+
+    // Background refresh latest profile from DB to keep avatar, biometrics & ball status current
+    if (token) {
+      fetchMe()
+        .then((res) => {
+          if (res?.user) {
+            saveSession(token, res.user);
+            set({ user: res.user });
+          }
+        })
+        .catch(() => {});
+    }
   },
   setSession: (token, user) => {
     saveSession(token, user);
     set({ token, user, hydrated: true });
+
+    // Fetch complete user profile from server to guarantee biometrics, ball ownership & avatar are populated
+    fetchMe()
+      .then((res) => {
+        if (res?.user) {
+          const merged = { ...user, ...res.user };
+          saveSession(token, merged);
+          set({ user: merged });
+        }
+      })
+      .catch(() => {});
   },
   signOut: () => {
     clearSessionStorage();

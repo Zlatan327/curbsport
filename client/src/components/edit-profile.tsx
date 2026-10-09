@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
 import { ArrowUpRight, Camera, UserRound } from 'lucide-react';
 import { updateProfile } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -40,6 +40,25 @@ export function EditProfile() {
   // Ball Owner & Match Equipment VIP
   const [hasBall, setHasBall] = useState<boolean>(Boolean(user?.hasBall));
   const [ballType, setBallType] = useState<string>(user?.ballType || '');
+
+  // Keep form fields synchronized with user store updates
+  useEffect(() => {
+    if (user) {
+      if (user.primarySport) setPrimarySport(user.primarySport as SportType);
+      if (user.footballPosition) setFootballPos(user.footballPosition as FootballPosition);
+      if (user.basketballPosition) setBasketballPos(user.basketballPosition as BasketballPosition);
+      if (user.heightCm) {
+        setHeightCm(user.heightCm.toString());
+        setHeightFeet(Math.floor(user.heightCm / 30.48).toString());
+        setHeightInches(Math.round((user.heightCm % 30.48) / 2.54).toString());
+      }
+      if (user.weightKg !== undefined && user.weightKg !== null) setWeightKg(user.weightKg.toString());
+      if (user.medicalInfo !== undefined && user.medicalInfo !== null) setMedicalInfo(user.medicalInfo);
+      if (user.avatarUrl) setAvatarPreview(user.avatarUrl);
+      setHasBall(Boolean(user.hasBall));
+      if (user.ballType) setBallType(user.ballType);
+    }
+  }, [user]);
 
   // Compress image from gallery to lightweight base64
   function handleAvatarFile(event: ChangeEvent<HTMLInputElement>) {
