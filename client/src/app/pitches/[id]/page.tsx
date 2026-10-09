@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useRef, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Camera, Check, Clock3, Crown, LoaderCircle, MapPin, MessageCircle, Navigation, Plus, Send, Share2, ShieldCheck, Swords, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Camera, Check, Clock3, Crown, LoaderCircle, MapPin, MessageCircle, Navigation, Plus, Send, Share2, ShieldCheck, Swords, Trophy, Users, X } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { AsyncButton } from "@/components/async-button";
 import { MapPlaceholder } from "@/components/map-placeholder";
@@ -11,12 +11,15 @@ import { EmptyState, LoadingState } from "@/components/page-state";
 import { StatusBadge } from "@/components/status-badge";
 import { SignInPrompt } from "@/components/sign-in-prompt";
 import { StatKing } from "@/components/stat-king";
+import { MatchScoreModal } from "@/components/match-score-modal";
+import { MatchResultCard } from "@/components/match-result-card";
+import { GroundConditionPills } from "@/components/ground-condition-pills";
 import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
 import { checkinBall, createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, votePitch } from "@/lib/api";
 import { formatLobbyWhatsAppMessage, formatBallBeaconWhatsAppMessage, shareToWhatsApp } from "@/lib/share";
 import { balanceSquad, formatBalancedSquadWhatsAppMessage } from "@/lib/balancer";
-import type { BanterMessage, LobbyPlayer } from "@/lib/types";
+import type { BanterMessage, Lobby, LobbyPlayer } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
 type Tab = "info" | "sets" | "banter";
@@ -50,6 +53,7 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
   const [uploadingImage, setUploadingImage] = useState(false);
   const [lobbyBusy, setLobbyBusy] = useState("");
   const [balancedLobbyId, setBalancedLobbyId] = useState<string | null>(null);
+  const [scoreLobbyModal, setScoreLobbyModal] = useState<Lobby | null>(null);
   const [banterBusy, setBanterBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -357,6 +361,17 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
       </div>
     </section>
 
+    <GroundConditionPills
+      pitchId={id}
+      pitchName={pitch.name}
+      isDemo={isDemo}
+      token={token}
+      onConditionBroadcast={(msg) => {
+        setActionNote(msg);
+        void refreshBanter();
+      }}
+    />
+
     {pitch.hasBallNow && (
       <div className="hero-ball-beacon">
         <span className="hero-ball-beacon__icon">{isBasketball ? "🏀" : "⚽"}</span>
@@ -435,6 +450,9 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
         const isDemoLobby = lobby.id.startsWith("demo-") || isDemo;
         const players = Array.isArray(lobby.players) ? (lobby.players as LobbyPlayer[]) : [];
         const isJoined = Boolean(user && players.some((p: any) => (p?.id && (p.id === user.id || String(p.id) === String(user.id))) || (p?.alias && p.alias === user.alias) || p === user.alias));
+        const isHost = Boolean(user && lobby.host && typeof lobby.host === "object" && ((lobby.host as any).id === user.id || String((lobby.host as any).id) === String(user.id)));
+        const canRecordScore = Boolean((isJoined || isHost) && players.length >= 2 && !lobby.matchResult && !isDemoLobby);
+        const currentUrl = typeof window !== "undefined" ? window.location.href : `https://insidelife.vercel.app/pitches/${id}`;
         
         // Host reputation advantage
         const hostRep = (typeof lobby.host === "object" && lobby.host ? (lobby.host as any).reputationScore : 0) || 0;
@@ -594,16 +612,45 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
             </div>
           )}
 
+          {/* Match Result Card if recorded */}
+          {lobby.matchResult && (
+            <MatchResultCard
+              lobby={lobby}
+              pitchName={pitch.name}
+              sportType={isBasketball ? "BASKETBALL" : "FOOTBALL"}
+              currentUserId={user?.id ? Number(user.id) : undefined}
+              onRefresh={async () => {
+                await refreshLobbies();
+                await refreshPitch();
+              }}
+              pitchUrl={currentUrl}
+            />
+          )}
+
           <div className="lobby-actions-row">
-            {isJoined ? (
-              <button type="button" className="button button--outline lobby-action-btn" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleLeave(lobby.id)}>
-                {lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <X size={16} />} LEAVE SET
-              </button>
-            ) : (
-              <button type="button" className="button button--green lobby-action-btn" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleJoin(lobby.id)}>
-                {lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <Users size={16} />} JOIN SET <ArrowUpRight size={16} />
+            {!lobby.matchResult && (
+              isJoined ? (
+                <button type="button" className="button button--outline lobby-action-btn" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleLeave(lobby.id)}>
+                  {lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <X size={16} />} LEAVE SET
+                </button>
+              ) : (
+                <button type="button" className="button button--green lobby-action-btn" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleJoin(lobby.id)}>
+                  {lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <Users size={16} />} JOIN SET <ArrowUpRight size={16} />
+                </button>
+              )
+            )}
+
+            {canRecordScore && (
+              <button
+                type="button"
+                className="lobby-score-btn"
+                onClick={() => setScoreLobbyModal(lobby)}
+                title="Log match result, scorers and MVP"
+              >
+                <Trophy size={14} /> <span>{isBasketball ? "🏀 RECORD SCORE (30s)" : "⚽ RECORD SCORE (30s)"}</span>
               </button>
             )}
+
             <button
               type="button"
               className="lobby-wa-btn"
@@ -652,5 +699,20 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
       {!isDemo && token ? <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void handleSend(); }}><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Who dey hold set today?" maxLength={500} aria-label="Write a chat message" /><button type="submit" disabled={banterBusy || !message.trim()} aria-label="Send message">{banterBusy ? <LoaderCircle className="spin" size={18} /> : <Send size={18} />}</button></form> : !token ? <SignInPrompt title="Join the conversation." copy="Log in to message the players at this pitch." /> : null}
       <p className="chat-footnote"><MessageCircle size={13} /> Keep the banter good. Respect the ground and the people on it.</p>
     </section>}
+
+    {scoreLobbyModal && (
+      <MatchScoreModal
+        lobby={scoreLobbyModal}
+        pitchName={pitch.name}
+        sportType={isBasketball ? "BASKETBALL" : "FOOTBALL"}
+        isOpen={Boolean(scoreLobbyModal)}
+        onClose={() => setScoreLobbyModal(null)}
+        onSuccess={async () => {
+          setActionNote("Match score logged! Teammates and opponents can now tap confirm (+15 REP).");
+          await refreshLobbies();
+          await refreshPitch();
+        }}
+      />
+    )}
   </AppFrame>;
 }

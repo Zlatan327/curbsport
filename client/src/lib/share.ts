@@ -87,3 +87,35 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
   return false;
 }
+
+export function formatMatchResultWhatsAppMessage(params: {
+  pitchName: string;
+  sportType?: 'FOOTBALL' | 'BASKETBALL';
+  status: string;
+  durationMins?: number;
+  mvpName?: string;
+  scorers: Array<{ name: string; goals?: number; points?: number }>;
+  pitchUrl: string;
+}): string {
+  const isBball = params.sportType === 'BASKETBALL';
+  const icon = isBball ? '🏀' : '⚽';
+  const title = isBball ? 'HOOPS MATCH RESULT' : 'MATCH SCORECARD';
+  const statusBadge = params.status === 'CONFIRMED' ? '🏆 VERIFIED RESULT (+15 REP)' : '⏳ PENDING PEER CONFIRMATION';
+
+  const scorerLines = params.scorers
+    .filter(s => (s.goals ?? s.points ?? 0) > 0)
+    .map(s => `  • ${s.name}: ${isBball ? `${s.points} PTS` : `${s.goals} ⚽`}`);
+
+  const lines = [
+    `${icon} *${title} — ${params.pitchName.toUpperCase()}*`,
+    `⚡ *Status:* ${statusBadge}`,
+    params.durationMins ? `⏱️ *Duration:* ${params.durationMins} mins` : null,
+    params.mvpName ? `⭐ *Man of the Match (MVP):* ${params.mvpName}` : null,
+    scorerLines.length > 0 ? `\n📊 *Stat Sheet:*\n${scorerLines.join('\n')}` : null,
+    ``,
+    `👉 *Tap to confirm score & claim your +15 REP:*`,
+    params.pitchUrl,
+  ].filter(Boolean);
+
+  return lines.join('\n');
+}

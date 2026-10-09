@@ -10,7 +10,7 @@ export const matchRouter = Router();
 
 const matchResultSchema = z.object({
   lobbyId: z.number().int(),
-  durationMins: z.number().int().min(30).max(180),
+  durationMins: z.number().int().min(10).max(180).default(30),
   stats: z.array(
     z.object({
       userId: z.number().int(),
@@ -25,7 +25,7 @@ const matchResultSchema = z.object({
       blocks: z.number().int().min(0).max(15).default(0),
       threePointers: z.number().int().min(0).max(25).default(0),
     })
-  ).min(4, "Minimum 4 players required for quorum"),
+  ).min(2, "Minimum 2 players required for quorum"),
 });
 
 matchRouter.post('/result', authMiddleware, validate(matchResultSchema), async (req: Request, res: Response): Promise<void> => {
@@ -43,7 +43,7 @@ matchRouter.post('/result', authMiddleware, validate(matchResultSchema), async (
       return;
     }
 
-    // Check if user submitted > 2 results today
+    // Check if user submitted > 5 results today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const submissionsToday = await prisma.matchResult.count({
@@ -53,8 +53,8 @@ matchRouter.post('/result', authMiddleware, validate(matchResultSchema), async (
       },
     });
 
-    if (submissionsToday >= 2) {
-      res.status(429).json({ error: 'Rate limit: Maximum 2 match results per day' });
+    if (submissionsToday >= 5) {
+      res.status(429).json({ error: 'Rate limit: Maximum 5 match results per day' });
       return;
     }
 
@@ -68,26 +68,30 @@ matchRouter.post('/result', authMiddleware, validate(matchResultSchema), async (
       return;
     }
 
+    if (lobby.status === LobbyStatus.CANCELLED) {
+      res.status(400).json({ error: 'Cannot submit results for a cancelled lobby' });
+      return;
+    }
+
+    // If lobby is active or building, auto-mark it as COMPLETED
     if (lobby.status !== LobbyStatus.COMPLETED) {
-      res.status(400).json({ error: 'Lobby must be completed to submit results' });
-      return;
+      await prisma.matchLobby.update({
+        where: { id: lobbyId },
+        data: { status: LobbyStatus.COMPLETED },
+      });
     }
 
-    const startTime = Math.max(lobby.scheduledAt.getTime(), lobby.createdAt.getTime());
-    const matchEndTime = new Date(startTime + durationMins * 60000);
-    if (matchEndTime > new Date()) {
-      res.status(400).json({ error: `Match duration (${durationMins} mins) exceeds the time elapsed since lobby creation/start.` });
-      return;
-    }
-
-    const isMember = lobby.members.some(m => m.userId === authReq.user!.userId);
+    const isMember = lobby.members.some(m => m.userId === authReq.user!.userId) || lobby.hostUserId === authReq.user!.userId;
     if (!isMember) {
-      res.status(403).json({ error: 'Must be a member of the lobby to submit results' });
+      res.status(403).json({ error: 'Must be a member or host of the lobby to submit results' });
       return;
     }
 
-    // Verify all stats users are members
+    // Verify all stats users are members or host
     const memberIds = lobby.members.map(m => m.userId);
+    if (!memberIds.includes(lobby.hostUserId)) {
+      memberIds.push(lobby.hostUserId);
+    }
     const validStats = stats.every((s: any) => memberIds.includes(s.userId));
     if (!validStats) {
       res.status(400).json({ error: 'All stats must belong to lobby members' });
@@ -128,7 +132,26 @@ matchRouter.post('/result', authMiddleware, validate(matchResultSchema), async (
           })),
         },
       },
+      include: {
+        stats: {
+          include: {
+            user: { select: { id: true, alias: true, avatarUrl: true, reputationScore: true } },
+          },
+        },
+      },
     });
+
+    // Notify connected pitch-side clients
+    const io = getIO();
+    if (io) {
+      io.to(`pitch_${lobby.pitchId}`).emit('match_result_submitted', {
+        lobbyId,
+        matchResult,
+      });
+      io.to(`pitch_${lobby.pitchId}`).emit('lobby_updated', {
+        lobbyId,
+      });
+    }
 
     res.status(201).json(matchResult);
   } catch (error) {
@@ -201,35 +224,117 @@ matchRouter.post('/:id/confirm', authMiddleware, validate(confirmSchema), async 
 
     const yesCount = confirmations.filter(c => c.confirmed).length;
     const noCount = confirmations.filter(c => !c.confirmed).length;
+    const needed = Math.min(2, Math.max(1, matchResult.playerCount - 1));
 
-    if (yesCount >= 2) {
+    if (yesCount >= needed) {
       await prisma.matchResult.update({
         where: { id: matchId },
         data: { status: MatchResultStatus.CONFIRMED },
       });
 
+      // Find top scorer / MVP candidate
+      let topUserId: number | null = null;
+      let topScore = -1;
+      for (const stat of matchResult.stats) {
+        const score = matchResult.sportType === SportType.FOOTBALL 
+          ? (stat.goals * 3 + stat.assists * 2 + stat.cleanSheets * 2 + stat.saves + stat.tackles)
+          : (stat.points * 2 + stat.rebounds + stat.steals * 2 + stat.blocks * 2 + stat.threePointers);
+        if (score > topScore) {
+          topScore = score;
+          topUserId = stat.userId;
+        }
+      }
+
       // Update user cumulative stats for each participant
       for (const stat of matchResult.stats) {
+        const isMvp = stat.userId === topUserId && topScore > 0;
         await prisma.user.update({
           where: { id: stat.userId },
           data: {
             matchesPlayed: { increment: 1 },
             goalsScored: { increment: stat.goals },
-            // Add other stats as necessary
+            reputationScore: { increment: isMvp ? 25 : 15 },
+            ...(isMvp ? { manOfTheMatch: { increment: 1 } } : {}),
           },
         });
       }
-    } else if (noCount >= 2) {
+
+      const io = getIO();
+      if (io) {
+        io.to(`pitch_${matchResult.pitchId}`).emit('match_confirmed', {
+          matchId,
+          lobbyId: matchResult.lobbyId,
+        });
+        io.to(`pitch_${matchResult.pitchId}`).emit('lobby_updated', {
+          lobbyId: matchResult.lobbyId,
+        });
+      }
+    } else if (noCount >= needed) {
       await prisma.matchResult.update({
         where: { id: matchId },
         data: { status: MatchResultStatus.DISPUTED },
       });
+
+      const io = getIO();
+      if (io) {
+        io.to(`pitch_${matchResult.pitchId}`).emit('match_disputed', {
+          matchId,
+          lobbyId: matchResult.lobbyId,
+        });
+      }
+    } else {
+      const io = getIO();
+      if (io) {
+        io.to(`pitch_${matchResult.pitchId}`).emit('match_confirmation_updated', {
+          matchId,
+          lobbyId: matchResult.lobbyId,
+          yesCount,
+          noCount,
+          needed,
+        });
+      }
     }
 
-    res.json({ success: true, yesCount, noCount });
+    res.json({ success: true, yesCount, noCount, needed });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+matchRouter.get('/lobby/:lobbyId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const lobbyId = parseInt(req.params.lobbyId as string, 10);
+    const result = await prisma.matchResult.findUnique({
+      where: { lobbyId },
+      include: {
+        stats: {
+          include: {
+            user: {
+              select: { id: true, alias: true, avatarUrl: true, reputationScore: true, favoritePosition: true, footballPosition: true, basketballPosition: true }
+            }
+          }
+        },
+        confirmations: {
+          include: {
+            user: { select: { id: true, alias: true } }
+          }
+        },
+        submittedBy: {
+          select: { id: true, alias: true }
+        }
+      }
+    });
+
+    if (!result) {
+      res.status(404).json({ error: 'No match result found for this lobby' });
+      return;
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Fetch match by lobby error:', error);
+    res.status(500).json({ error: 'Failed to fetch match result' });
   }
 });
 

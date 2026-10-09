@@ -34,13 +34,19 @@ lobbyRouter.get('/', async (req: Request, res: Response) => {
     const pitchId = req.query.pitchId ? parseInt(req.query.pitchId as string) : undefined;
 
     const where: any = {
-      status: { in: ['BUILDING', 'FULL', 'ACTIVE'] },
+      OR: [
+        { status: { in: ['BUILDING', 'FULL', 'ACTIVE'] } },
+        {
+          status: 'COMPLETED',
+          createdAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+        },
+      ],
     };
     if (pitchId) where.pitchId = pitchId;
 
     const lobbies = await prisma.matchLobby.findMany({
       where,
-      orderBy: { scheduledAt: 'asc' },
+      orderBy: { scheduledAt: 'desc' },
       include: {
         host: {
           select: {
@@ -57,6 +63,34 @@ lobbyRouter.get('/', async (req: Request, res: Response) => {
         },
         pitch: { select: { name: true, schoolId: true, sportType: true, hasBallNow: true, ballBroughtBy: true } },
         _count: { select: { members: true } },
+        matchResult: {
+          include: {
+            stats: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    alias: true,
+                    avatarUrl: true,
+                    reputationScore: true,
+                  },
+                },
+              },
+            },
+            confirmations: {
+              select: {
+                userId: true,
+                confirmed: true,
+              },
+            },
+            submittedBy: {
+              select: {
+                id: true,
+                alias: true,
+              },
+            },
+          },
+        },
         members: {
           select: {
             user: {

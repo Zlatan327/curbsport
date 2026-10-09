@@ -1213,6 +1213,764 @@ a { color: inherit; text-decoration: none; }
   color: #000;
 }
 
+/* ============================================================
+   MATCH RESULT LOGGING & PEER CONFIRMATION STYLES (P2)
+   ============================================================ */
+
+.lobby-score-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(250, 204, 21, 0.15);
+  border: 1px solid #facc15;
+  color: #facc15;
+  font: 800 9px var(--font-display);
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.lobby-score-btn:hover {
+  background: #facc15;
+  color: #000;
+}
+
+/* Modal Overlay */
+.match-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.match-modal-container {
+  background: #111411;
+  border: 1px solid rgba(0, 255, 102, 0.35);
+  box-shadow: 0 0 30px rgba(0, 255, 102, 0.15);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.match-modal-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(240, 240, 232, 0.12);
+}
+
+.match-modal-eyebrow {
+  font: 800 8px var(--font-display);
+  color: var(--turf);
+  letter-spacing: .12em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.match-modal-header h2 {
+  font: 900 16px var(--font-display);
+  color: #fff;
+  letter-spacing: .06em;
+  margin: 0;
+}
+
+.match-modal-subtitle {
+  color: var(--smoke);
+  font-size: 10px;
+  margin: 4px 0 0 0;
+}
+
+.match-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--smoke);
+  cursor: pointer;
+  padding: 4px;
+  transition: color .15s ease;
+}
+
+.match-modal-close:hover {
+  color: #fff;
+}
+
+.match-modal-error {
+  padding: 10px 16px;
+  background: rgba(255, 51, 102, 0.15);
+  border-bottom: 1px solid #ff3366;
+  color: #ff3366;
+  font-size: 11px;
+}
+
+.match-modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.match-duration-picker .picker-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font: 700 8px var(--font-display);
+  color: var(--smoke);
+  margin-bottom: 6px;
+  letter-spacing: .08em;
+}
+
+.duration-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.duration-chip {
+  padding: 6px 12px;
+  background: #181c18;
+  border: 1px solid rgba(240, 240, 232, 0.15);
+  color: #ccc;
+  font: 700 8px var(--font-display);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.duration-chip.is-active {
+  background: var(--turf);
+  color: #000;
+  border-color: var(--turf);
+}
+
+.match-roster-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font: 800 8px var(--font-display);
+  color: var(--smoke);
+  letter-spacing: .08em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(240, 240, 232, 0.1);
+}
+
+.match-roster-stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.match-player-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #181d18;
+  border: 1px solid rgba(240, 240, 232, 0.08);
+  transition: border-color .15s ease;
+}
+
+.match-player-stat-row.is-mvp {
+  border-color: rgba(250, 204, 21, 0.5);
+  background: rgba(250, 204, 21, 0.05);
+}
+
+.player-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.player-alias {
+  font: 700 11px var(--font-sans);
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
+.mvp-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  background: transparent;
+  border: 1px solid rgba(240, 240, 232, 0.2);
+  color: var(--smoke);
+  font: 700 7px var(--font-display);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.mvp-badge-btn.is-active {
+  background: #facc15;
+  color: #000;
+  border-color: #facc15;
+}
+
+.player-stat-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-stepper .stat-label {
+  font: 700 7px var(--font-display);
+  color: var(--smoke);
+  margin-right: 2px;
+}
+
+.stepper-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #252b25;
+  border: 1px solid rgba(240, 240, 232, 0.15);
+  color: #fff;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.stepper-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.stepper-btn:not(:disabled):hover {
+  background: var(--turf);
+  color: #000;
+  border-color: var(--turf);
+}
+
+.stepper-value {
+  min-width: 18px;
+  text-align: center;
+  font: 900 11px var(--font-display);
+  color: var(--turf);
+}
+
+.match-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.submit-score-btn {
+  flex: 1;
+}
+
+/* Match Result Card inside Lobby */
+.match-result-card {
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid rgba(240, 240, 232, 0.15);
+  background: #131713;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.match-result-card.is-confirmed {
+  border-color: rgba(0, 255, 102, 0.4);
+  background: rgba(0, 255, 102, 0.04);
+}
+
+.match-result-card.is-pending {
+  border-color: rgba(250, 204, 21, 0.35);
+  background: rgba(250, 204, 21, 0.03);
+}
+
+.match-result-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.match-result-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 800 8px var(--font-display);
+  letter-spacing: .08em;
+}
+
+.is-confirmed .match-result-status-pill {
+  color: var(--turf);
+}
+
+.is-pending .match-result-status-pill {
+  color: #facc15;
+}
+
+.is-disputed .match-result-status-pill {
+  color: var(--danger);
+}
+
+.match-duration-badge {
+  font: 700 7px var(--font-display);
+  color: var(--smoke);
+}
+
+.match-result-notice {
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.notice--success {
+  background: rgba(0, 255, 102, 0.1);
+  color: var(--turf);
+  border: 1px solid rgba(0, 255, 102, 0.3);
+}
+
+.notice--error {
+  background: rgba(255, 51, 102, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(255, 51, 102, 0.3);
+}
+
+.match-result-mvp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(250, 204, 21, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
+.mvp-star {
+  color: #facc15;
+  fill: #facc15;
+}
+
+.mvp-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.mvp-label {
+  font: 800 6px var(--font-display);
+  color: #facc15;
+  letter-spacing: .1em;
+}
+
+.mvp-content strong {
+  font: 800 11px var(--font-display);
+  color: #fff;
+}
+
+.mvp-content small {
+  color: var(--smoke);
+  font-size: 8px;
+}
+
+.match-result-scorers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scorers-label {
+  font: 700 7px var(--font-display);
+  color: var(--smoke);
+  letter-spacing: .08em;
+}
+
+.scorers-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.scorer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background: #1c221c;
+  border: 1px solid rgba(240, 240, 232, 0.1);
+  font-size: 9px;
+}
+
+.scorer-chip strong {
+  color: #fff;
+}
+
+.scorer-chip span {
+  color: var(--turf);
+  font-weight: 700;
+}
+
+.match-result-peer-action {
+  padding: 10px;
+  background: #1a1505;
+  border: 1px dashed rgba(250, 204, 21, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.peer-prompt {
+  font-size: 10px;
+  color: #fef08a;
+  margin: 0;
+}
+
+.peer-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.confirm-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--turf);
+  border: none;
+  color: #000;
+  font: 800 8px var(--font-display);
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: opacity .15s ease;
+}
+
+.confirm-btn:hover {
+  opacity: 0.9;
+}
+
+.dispute-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid rgba(240, 240, 232, 0.2);
+  color: var(--smoke);
+  font: 700 8px var(--font-display);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.dispute-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.match-confirmed-by-user {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: var(--turf);
+  background: rgba(0, 255, 102, 0.05);
+  padding: 4px 8px;
+}
+
+.match-submitter-note {
+  font-size: 9px;
+  color: var(--smoke);
+  font-style: italic;
+  padding: 2px 4px;
+}
+
+.match-share-wa-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid #25d366;
+  color: #25d366;
+  font: 800 8px var(--font-display);
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.match-share-wa-btn:hover {
+  background: #25d366;
+  color: #000;
+}
+
+/* ============================================================
+   PWA INSTALL BANNER & IOS HOME SCREEN STYLES (P3)
+   ============================================================ */
+
+.pwa-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+  background: #111411;
+  border: 1px solid rgba(0, 255, 102, 0.4);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 255, 102, 0.2);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 999;
+  animation: slideUp .25s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.pwa-banner__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  background: rgba(0, 255, 102, 0.12);
+  border: 1px solid rgba(0, 255, 102, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--turf);
+  flex-shrink: 0;
+}
+
+.pwa-banner__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pwa-banner__content strong {
+  font: 800 10px var(--font-display);
+  color: #fff;
+  letter-spacing: .08em;
+}
+
+.pwa-banner__content span {
+  font-size: 9px;
+  color: var(--smoke);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pwa-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pwa-install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: var(--turf);
+  color: #000;
+  border: none;
+  font: 800 8px var(--font-display);
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: opacity .15s ease;
+  white-space: nowrap;
+}
+
+.pwa-install-btn:hover {
+  opacity: 0.9;
+}
+
+.pwa-dismiss-btn {
+  background: transparent;
+  border: none;
+  color: var(--smoke);
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pwa-dismiss-btn:hover {
+  color: #fff;
+}
+
+/* iOS PWA Helper Modal */
+.ios-pwa-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ios-pwa-modal {
+  background: #131713;
+  border: 1px solid rgba(0, 255, 102, 0.3);
+  box-shadow: 0 0 25px rgba(0, 255, 102, 0.15);
+  max-width: 380px;
+  width: 100%;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ios-pwa-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ios-pwa-modal__header h3 {
+  font: 800 13px var(--font-display);
+  color: #fff;
+  letter-spacing: .08em;
+  margin: 0;
+}
+
+.ios-pwa-modal__desc {
+  font-size: 11px;
+  color: var(--smoke);
+  margin: 0;
+}
+
+.ios-pwa-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ios-pwa-steps li {
+  font-size: 11px;
+  color: #ddd;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ios-pwa-steps li span {
+  font: 800 10px var(--font-display);
+  color: var(--turf);
+}
+
+.inline-icon {
+  display: inline;
+  vertical-align: middle;
+  color: var(--turf);
+}
+
+/* ============================================================
+   TOUCHLINE GROUND CONDITION PILLS (P4)
+   ============================================================ */
+
+.ground-conditions-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 8px 10px;
+  background: #111511;
+  border: 1px solid rgba(240, 240, 232, 0.1);
+  overflow-x: auto;
+}
+
+.conditions-label {
+  font: 800 7px var(--font-display);
+  color: var(--smoke);
+  letter-spacing: .08em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.conditions-chips-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.conditions-chips-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.condition-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: #171d17;
+  border: 1px solid rgba(240, 240, 232, 0.12);
+  color: #ccc;
+  font: 700 8px var(--font-display);
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: all .15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.condition-chip:hover {
+  border-color: var(--turf);
+  color: #fff;
+}
+
+.condition-chip.is-active {
+  background: rgba(0, 255, 102, 0.12);
+  border-color: var(--turf);
+  color: var(--turf);
+}
+
+.condition-chip__active-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--turf);
+  box-shadow: 0 0 6px var(--turf);
+}
+
+
 
 
 

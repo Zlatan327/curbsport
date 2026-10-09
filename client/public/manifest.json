@@ -1,0 +1,37 @@
+{
+  "name": "Inside Life — Live Pickup Sports & Ground Radar",
+  "short_name": "Inside Life",
+  "description": "Find verified football pitches & basketball courts, check live ball radar ('Ball Dey Ground'), rally match sets, and pull up to play.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#111311",
+  "theme_color": "#00ff66",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "64x64 192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "social", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Live Ground Radar",
+      "short_name": "Radar",
+      "description": "Find local grounds and live games",
+      "url": "/",
+      "icons": [{ "src": "/icon.svg", "sizes": "64x64" }]
+    },
+    {
+      "name": "Campus Map",
+      "short_name": "Map",
+      "description": "Interactive map of all grounds",
+      "url": "/map",
+      "icons": [{ "src": "/icon.svg", "sizes": "64x64" }]
+    }
+  ]
+}

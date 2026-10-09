@@ -83,36 +83,19 @@ export interface LobbyPlayer {
   isCaptain?: boolean;
 }
 
-export interface Lobby {
-  id: string;
-  pitchId?: string | number;
-  title?: string;
-  startsAt?: string;
-  date?: string;
-  maxPlayers?: number;
-  playerCount?: number;
-  players?: Array<LobbyPlayer | AuthUser | string>;
-  host?: LobbyPlayer | AuthUser;
-  hostUserId?: number;
-  hasBall?: boolean;
-  note?: string;
-  status?: string;
-  [key: string]: unknown;
+export interface MatchConfirmationInfo {
+  userId: number;
+  confirmed: boolean;
+  user?: {
+    id: number;
+    alias: string;
+  };
 }
-
-export interface AuthResponse {
-  token: string;
-  user: AuthUser;
-}
-
-export type SportType = "FOOTBALL" | "BASKETBALL";
-export type FootballPosition = "GOALKEEPER" | "DEFENDER" | "MIDFIELDER" | "FORWARD";
-export type BasketballPosition = "GUARD" | "FORWARD" | "CENTER";
-export type MatchResultStatus = "PENDING" | "CONFIRMED" | "DISPUTED" | "SLASHED";
 
 export interface MatchStat {
   userId: number;
   alias?: string;
+  avatarUrl?: string;
   goals: number;
   assists: number;
   cleanSheets: number;
@@ -154,9 +137,39 @@ export interface MatchResult {
   durationMins: number;
   playerCount: number;
   stats: MatchStat[];
-  confirmations?: number;
+  confirmations?: MatchConfirmationInfo[] | number;
+  submittedById?: number;
+  submittedBy?: { id: number; alias: string };
   confirmationsNeeded?: number;
 }
+
+export interface Lobby {
+  id: string;
+  pitchId?: string | number;
+  title?: string;
+  startsAt?: string;
+  date?: string;
+  maxPlayers?: number;
+  playerCount?: number;
+  players?: Array<LobbyPlayer | AuthUser | string>;
+  host?: LobbyPlayer | AuthUser;
+  hostUserId?: number;
+  hasBall?: boolean;
+  note?: string;
+  status?: string;
+  matchResult?: MatchResult | null;
+  [key: string]: unknown;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
+export type SportType = "FOOTBALL" | "BASKETBALL";
+export type FootballPosition = "GOALKEEPER" | "DEFENDER" | "MIDFIELDER" | "FORWARD";
+export type BasketballPosition = "GUARD" | "FORWARD" | "CENTER";
+export type MatchResultStatus = "PENDING" | "CONFIRMED" | "DISPUTED" | "SLASHED";
 
 export interface UserStats {
   userId: number;

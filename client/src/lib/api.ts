@@ -1,4 +1,4 @@
-import type { AuthResponse, AuthUser, BanterMessage, LeaderboardEntry, Lobby, LobbyPlayer, Pitch, SportType, UserStats } from "@/lib/types";
+import type { AuthResponse, AuthUser, BanterMessage, LeaderboardEntry, Lobby, LobbyPlayer, MatchResult, MatchStat, Pitch, SportType, UserStats } from "@/lib/types";
 
 export const TOKEN_KEY = "inside-life-token";
 export const USER_KEY = "inside-life-user";
@@ -211,6 +211,53 @@ export function normalizeLobbies(value: unknown): Lobby[] {
 
     const lobbyHasBall = Boolean(record.hasBall || hostPlayer?.hasBall || players.some((p) => p.hasBall));
 
+    const rawMatchResult = record.matchResult as any;
+    let matchResult: MatchResult | undefined = undefined;
+    if (rawMatchResult && typeof rawMatchResult === 'object') {
+      const confirmations = Array.isArray(rawMatchResult.confirmations)
+        ? rawMatchResult.confirmations.map((c: any) => ({
+            userId: Number(c.userId),
+            confirmed: Boolean(c.confirmed),
+            user: c.user ? { id: Number(c.user.id), alias: String(c.user.alias) } : undefined,
+          }))
+        : typeof rawMatchResult.confirmations === 'number'
+        ? rawMatchResult.confirmations
+        : [];
+
+      const stats: MatchStat[] = Array.isArray(rawMatchResult.stats)
+        ? rawMatchResult.stats.map((s: any) => ({
+            userId: Number(s.userId),
+            alias: s.user?.alias || s.alias || `Player #${s.userId}`,
+            avatarUrl: s.user?.avatarUrl || s.avatarUrl,
+            goals: Number(s.goals || 0),
+            assists: Number(s.assists || 0),
+            cleanSheets: Number(s.cleanSheets || 0),
+            saves: Number(s.saves || 0),
+            tackles: Number(s.tackles || 0),
+            points: Number(s.points || 0),
+            rebounds: Number(s.rebounds || 0),
+            steals: Number(s.steals || 0),
+            blocks: Number(s.blocks || 0),
+            threePointers: Number(s.threePointers || 0),
+          }))
+        : [];
+
+      matchResult = {
+        id: Number(rawMatchResult.id),
+        lobbyId: Number(rawMatchResult.lobbyId ?? record.id),
+        pitchId: Number(rawMatchResult.pitchId ?? record.pitchId),
+        status: rawMatchResult.status || 'PENDING',
+        sportType: (rawMatchResult.sportType || 'FOOTBALL') as SportType,
+        matchDate: String(rawMatchResult.matchDate || ''),
+        durationMins: Number(rawMatchResult.durationMins || 30),
+        playerCount: Number(rawMatchResult.playerCount || stats.length),
+        submittedById: rawMatchResult.submittedById ? Number(rawMatchResult.submittedById) : undefined,
+        submittedBy: rawMatchResult.submittedBy,
+        confirmations,
+        stats,
+      };
+    }
+
     return {
       ...(record as Partial<Lobby>),
       id: String(record.id ?? record._id ?? index),
@@ -224,6 +271,7 @@ export function normalizeLobbies(value: unknown): Lobby[] {
       hasBall: lobbyHasBall,
       note: typeof record.teamName === "string" ? record.teamName : (typeof record.note === "string" ? record.note : undefined),
       status: String(record.status ?? "BUILDING"),
+      matchResult,
     };
   });
 }

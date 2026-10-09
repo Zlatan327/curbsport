@@ -48,6 +48,12 @@ export const metadata: Metadata = {
     images: ["/icon.svg"],
   },
   icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Inside Life",
+  },
 };
 
 export const viewport: Viewport = {
