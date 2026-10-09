@@ -9,6 +9,22 @@ export interface AuthRequest extends Request {
   };
 }
 
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  const isDefaultOrWeak =
+    !secret ||
+    secret === 'fallback-secret' ||
+    secret === 'change-this-to-a-random-secret-in-production';
+
+  if (isDefaultOrWeak) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: A strong JWT_SECRET must be configured in production environment.');
+    }
+    return secret || 'inside-life-dev-secret-change-in-prod';
+  }
+  return secret;
+}
+
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
@@ -20,7 +36,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as {
+    const decoded = jwt.verify(token, getJwtSecret()) as {
       userId: number;
       schoolId: number;
       alias: string;

@@ -9,15 +9,24 @@ import { getIO } from '../lib/socket';
 export const banterRouter = Router();
 
 // Rate limit banter: 1 message per 3 seconds
+// Rate limit banter: 1 message per 3 seconds per user/IP
 const banterRateLimit = rateLimit({
   windowMs: 3000,
   max: 1,
+  keyGenerator: (req: any) => (req.user?.userId ? `user_${req.user.userId}` : req.ip || 'unknown'),
   message: { error: 'Easy! One banter at a time. Wait small.' },
 });
 
 const banterSchema = z.object({
-  text: z.string().min(1).max(280).trim(),
-});
+  text: z.string().max(280).trim().optional(),
+  message: z.string().max(280).trim().optional(),
+  pitchId: z.coerce.number().int().positive().optional(),
+}).refine(data => Boolean((data.text && data.text.length > 0) || (data.message && data.message.length > 0)), {
+  message: 'Message cannot be empty',
+  path: ['text'],
+}).transform(data => ({
+  text: (data.text || data.message || '').trim(),
+}));
 
 // GET /api/banter?pitchId=X&cursor=Y (Public read)
 banterRouter.get('/', async (req: Request, res: Response) => {
@@ -52,19 +61,35 @@ banterRouter.get('/', async (req: Request, res: Response) => {
   }
 });
 
+function sanitizeBanterText(input: string): string {
+  let cleaned = input;
+  let previous = '';
+  // Defeat nested tag injection attempts like <<script>script>
+  while (cleaned !== previous) {
+    previous = cleaned;
+    cleaned = cleaned.replace(/<[^>]*>?/gm, '');
+  }
+  // Strip non-printable control characters
+  return cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim();
+}
+
 // POST /api/banter?pitchId=X
 banterRouter.post('/', authMiddleware, banterRateLimit, validate(banterSchema), async (req: AuthRequest, res: Response) => {
   try {
-    const pitchId = parseInt(req.query.pitchId as string);
+    const rawPitchId = req.query.pitchId || req.body.pitchId;
+    const pitchId = parseInt(rawPitchId as string, 10);
     const userId = req.user!.userId;
 
     if (!pitchId || isNaN(pitchId)) {
-      res.status(400).json({ error: 'pitchId query param is required' });
+      res.status(400).json({ error: 'pitchId is required (in query or body)' });
       return;
     }
 
-    // Strip HTML tags for safety
-    const text = req.body.text.replace(/<[^>]*>/g, '');
+    const text = sanitizeBanterText(req.body.text);
+    if (!text) {
+      res.status(400).json({ error: 'Message cannot be empty or solely HTML markup' });
+      return;
+    }
 
     const message = await prisma.banterMessage.create({
       data: { pitchId, userId, text },

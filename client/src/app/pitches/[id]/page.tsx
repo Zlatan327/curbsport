@@ -13,7 +13,7 @@ import { SignInPrompt } from "@/components/sign-in-prompt";
 import { StatKing } from "@/components/stat-king";
 import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
-import { createLobby, joinLobby, sendBanter, votePitch } from "@/lib/api";
+import { createLobby, joinLobby, leaveLobby, sendBanter, votePitch } from "@/lib/api";
 import type { BanterMessage } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
@@ -34,7 +34,7 @@ function displayTime(value?: string): string {
 
 export default function PitchDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
-  const { token, hydrated } = useAuthStore();
+  const { token, user, hydrated } = useAuthStore();
   const isDemoId = id.startsWith("demo-");
   const { data, error: pitchError, isLoading, mutate: refreshPitch } = usePitch(isDemoId ? "" : id);
   const demoPitch = DEMO_PITCHES.find((pitch) => pitch.id === id);
@@ -87,13 +87,31 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
     } finally { setLobbyBusy(""); }
   }
 
+  async function handleLeave(lobbyId: string) {
+    if (!token) return setActionError("Log in before leaving a set.");
+    setActionError(""); setActionNote(""); setLobbyBusy(lobbyId);
+    try {
+      await leaveLobby(lobbyId);
+      setActionNote("You left the set.");
+      await refreshLobbies();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Couldn't leave that set.");
+    } finally { setLobbyBusy(""); }
+  }
+
   async function handleCreateLobby(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) return setActionError("Log in before creating a set.");
     if (!lobbyTime) return setActionError("Choose a kick-off time.");
     setActionError(""); setActionNote(""); setLobbyBusy("create");
     try {
-      await createLobby({ pitchId: id, startsAt: new Date(lobbyTime).toISOString(), maxPlayers: Number(lobbyPlayers), note: `${lobbyTitle.trim()}${lobbyNote.trim() ? ` — ${lobbyNote.trim()}` : ""}` });
+      await createLobby({
+        pitchId: id,
+        startsAt: new Date(lobbyTime).toISOString(),
+        maxPlayers: Number(lobbyPlayers),
+        title: lobbyTitle.trim(),
+        note: `${lobbyTitle.trim()}${lobbyNote.trim() ? ` — ${lobbyNote.trim()}` : ""}`,
+      });
       setActionNote("Set posted. Pull your people in.");
       setShowCreate(false);
       setLobbyTitle("Evening set"); setLobbyTime(""); setLobbyNote("");
@@ -162,13 +180,18 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
       <div className="lobby-list">{lobbies.map((lobby) => {
         const isDemoLobby = lobby.id.startsWith("demo-") || isDemo;
         const players = Array.isArray(lobby.players) ? lobby.players : [];
+        const isJoined = Boolean(user && players.some((p: any) => (p?.id && (p.id === user.id || String(p.id) === String(user.id))) || (p?.alias && p.alias === user.alias) || p === user.alias));
         return <article className="lobby-card" key={lobby.id}>
           <div className="lobby-card__top"><span className="lobby-open"><i /> OPEN SET</span>{isDemoLobby && <span className="demo-tag demo-tag--inline">SAMPLE</span>}</div>
           <h3>{lobby.title || "Local football set"}</h3>
           <p className="lobby-card__note">{lobby.note || "No extra notes. Check in with the host."}</p>
           <div className="lobby-card__meta"><span><Clock3 size={14} /> {lobby.startsAt ? displayTime(lobby.startsAt) : lobby.date || "Time not listed"}</span><span><Users size={14} /> {lobby.playerCount || players.length}/{lobby.maxPlayers || "?"}</span></div>
           <div className="player-stack" aria-label={`${players.length} players in set`}>{players.slice(0, 5).map((player, index) => { const name = typeof player === "string" ? player : (player.alias as string) || "P"; return <span key={`${lobby.id}-${index}`} title={name}>{name.slice(0, 1).toUpperCase()}</span>; })}<small>{players.length ? `${players.length} IN` : "BE FIRST IN"}</small></div>
-          <button type="button" className="button button--green button--full lobby-join" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleJoin(lobby.id)}>{lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <Users size={16} />} JOIN THE SET <ArrowUpRight size={16} /></button>
+          {isJoined ? (
+            <button type="button" className="button button--outline button--full lobby-join" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleLeave(lobby.id)}>{lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <X size={16} />} LEAVE THE SET</button>
+          ) : (
+            <button type="button" className="button button--green button--full lobby-join" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleJoin(lobby.id)}>{lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <Users size={16} />} JOIN THE SET <ArrowUpRight size={16} /></button>
+          )}
           {isDemoLobby && <p className="demo-explainer">Connect to the API to join live sets.</p>}
         </article>;
       })}</div>

@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { getIO } from '../lib/socket';
 
 export const pitchRouter = Router();
 
@@ -10,13 +12,23 @@ export const pitchRouter = Router();
 
 const createPitchSchema = z.object({
   name: z.string().min(2).max(255).trim(),
-  fieldType: z.enum(['Paid Turf', 'School Ground', 'Street Arena']),
-  priceBracket: z.string().max(50),
-  schoolId: z.number().int().positive(),
-  landmarkDescription: z.string().min(10).max(1000).trim(),
+  fieldType: z.enum(['Paid Turf', 'School Ground', 'Street Arena']).default('Street Arena'),
+  priceBracket: z.string().max(50).default('Free'),
+  schoolId: z.coerce.number().int().positive().default(1),
+  landmarkDescription: z.string().min(4).max(1000).trim().optional(),
+  address: z.string().min(4).max(1000).trim().optional(),
+  description: z.string().max(1000).trim().optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
-});
+}).transform(d => ({
+  name: d.name,
+  fieldType: d.fieldType,
+  priceBracket: d.priceBracket,
+  schoolId: d.schoolId,
+  landmarkDescription: (d.landmarkDescription || d.address || d.description || 'Community football ground').trim(),
+  latitude: d.latitude,
+  longitude: d.longitude,
+}));
 
 const updateStatusSchema = z.object({
   activeStatus: z.enum(['UNKNOWN', 'DRY', 'BUILDING', 'LIVE']),
@@ -121,16 +133,37 @@ pitchRouter.post('/', authMiddleware, validate(createPitchSchema), async (req: A
   }
 });
 
+// Rate limit status changes: max 3 updates per minute per user to prevent status vandalism
+const pitchStatusRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  keyGenerator: (req: any) => (req.user?.userId ? `user_pitch_status_${req.user.userId}` : req.ip || 'unknown'),
+  message: { error: 'Please wait before updating pitch ground status again.' },
+});
+
 // PATCH /api/pitches/:id/status
-pitchRouter.patch('/:id/status', authMiddleware, validate(updateStatusSchema), async (req: AuthRequest, res: Response) => {
+pitchRouter.patch('/:id/status', authMiddleware, pitchStatusRateLimit, validate(updateStatusSchema), async (req: AuthRequest, res: Response) => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id as string, 10);
+    if (!id || isNaN(id)) {
+      res.status(400).json({ error: 'Valid pitch id is required' });
+      return;
+    }
+
+    const existing = await prisma.pitch.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Pitch not found' });
+      return;
+    }
+
     const { activeStatus } = req.body;
 
     const pitch = await prisma.pitch.update({
       where: { id },
       data: { activeStatus },
     });
+
+    getIO().to(`pitch:${id}`).emit('pitch:status_updated', pitch);
 
     res.json({ pitch });
   } catch (err) {

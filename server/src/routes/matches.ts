@@ -138,8 +138,13 @@ matchRouter.post('/result', authMiddleware, validate(matchResultSchema), async (
 });
 
 const confirmSchema = z.object({
-  confirm: z.boolean(),
-});
+  confirm: z.boolean().optional(),
+  confirmed: z.boolean().optional(),
+}).refine(data => data.confirm !== undefined || data.confirmed !== undefined, {
+  message: 'Confirmation boolean is required',
+}).transform(data => ({
+  confirm: data.confirm !== undefined ? data.confirm : (data.confirmed as boolean),
+}));
 
 matchRouter.post('/:id/confirm', authMiddleware, validate(confirmSchema), async (req: Request, res: Response): Promise<void> => {
   try {

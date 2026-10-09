@@ -9,11 +9,22 @@ import { LobbyStatus } from '@prisma/client';
 export const lobbyRouter = Router();
 
 const createLobbySchema = z.object({
-  pitchId: z.number().int().positive(),
+  pitchId: z.coerce.number().int().positive(),
   teamName: z.string().max(100).optional(),
-  maxPlayers: z.number().int().min(2).max(22).default(10),
-  scheduledAt: z.string().datetime(),
-});
+  title: z.string().max(100).optional(),
+  note: z.string().max(100).optional(),
+  maxPlayers: z.coerce.number().int().min(2).max(30).default(10),
+  scheduledAt: z.string().optional(),
+  startsAt: z.string().optional(),
+}).refine(data => Boolean(data.scheduledAt || data.startsAt), {
+  message: 'Kick-off time (scheduledAt or startsAt) is required',
+  path: ['scheduledAt'],
+}).transform(data => ({
+  pitchId: data.pitchId,
+  teamName: data.teamName || data.title || data.note,
+  maxPlayers: data.maxPlayers,
+  scheduledAt: (data.scheduledAt || data.startsAt) as string,
+}));
 
 // GET /api/lobbies?pitchId=X (Public read)
 lobbyRouter.get('/', async (req: Request, res: Response) => {

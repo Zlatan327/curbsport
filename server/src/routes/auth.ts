@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { authMiddleware, AuthRequest, getJwtSecret } from '../middleware/auth';
 
 export const authRouter = Router();
 
@@ -61,7 +61,7 @@ authRouter.post('/register', validate(registerSchema), async (req: Request, res:
 
     const token = jwt.sign(
       { userId: user.id, schoolId: user.schoolId, alias: user.alias },
-      process.env.JWT_SECRET || 'fallback-secret',
+      getJwtSecret(),
       { expiresIn: '365d' }
     );
 
@@ -95,7 +95,7 @@ authRouter.post('/login', validate(loginSchema), async (req: Request, res: Respo
 
     const token = jwt.sign(
       { userId: user.id, schoolId: user.schoolId, alias: user.alias },
-      process.env.JWT_SECRET || 'fallback-secret',
+      getJwtSecret(),
       { expiresIn: '365d' }
     );
 
