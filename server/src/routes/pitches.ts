@@ -20,14 +20,18 @@ const createPitchSchema = z.object({
   description: z.string().max(1000).trim().optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
+  imageUrl: z.string().max(2_000_000).optional(),
+  sportType: z.enum(['FOOTBALL', 'BASKETBALL']).default('FOOTBALL'),
 }).transform(d => ({
   name: d.name,
   fieldType: d.fieldType,
   priceBracket: d.priceBracket,
   schoolId: d.schoolId,
-  landmarkDescription: (d.landmarkDescription || d.address || d.description || 'Community football ground').trim(),
+  landmarkDescription: (d.landmarkDescription || d.address || d.description || 'Community sports ground').trim(),
   latitude: d.latitude,
   longitude: d.longitude,
+  imageUrl: d.imageUrl,
+  sportType: d.sportType,
 }));
 
 const updateStatusSchema = z.object({
@@ -221,3 +225,39 @@ pitchRouter.post('/:id/vote', authMiddleware, validate(voteSchema), async (req: 
     res.status(500).json({ error: 'Failed to vote' });
   }
 });
+
+const updateImageSchema = z.object({
+  imageUrl: z.string().min(10).max(2_000_000),
+});
+
+// PATCH /api/pitches/:id/image
+pitchRouter.patch('/:id/image', authMiddleware, validate(updateImageSchema), async (req: AuthRequest, res: Response) => {
+  try {
+    const id = parseInt(req.params.id as string, 10);
+    if (!id || isNaN(id)) {
+      res.status(400).json({ error: 'Valid pitch id is required' });
+      return;
+    }
+
+    const existing = await prisma.pitch.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Pitch not found' });
+      return;
+    }
+
+    const { imageUrl } = req.body;
+
+    const pitch = await prisma.pitch.update({
+      where: { id },
+      data: { imageUrl },
+    });
+
+    getIO().to(`pitch:${id}`).emit('pitch:image_updated', pitch);
+
+    res.json({ pitch });
+  } catch (err) {
+    console.error('Update pitch image error:', err);
+    res.status(500).json({ error: 'Failed to update pitch image' });
+  }
+});
+

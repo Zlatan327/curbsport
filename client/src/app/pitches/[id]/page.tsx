@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useRef, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Check, Clock3, LoaderCircle, MapPin, MessageCircle, Plus, Send, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Camera, Check, Clock3, Crown, LoaderCircle, MapPin, MessageCircle, Navigation, Plus, Send, ShieldCheck, Users, X } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { AsyncButton } from "@/components/async-button";
 import { MapPlaceholder } from "@/components/map-placeholder";
@@ -13,8 +13,8 @@ import { SignInPrompt } from "@/components/sign-in-prompt";
 import { StatKing } from "@/components/stat-king";
 import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
-import { createLobby, joinLobby, leaveLobby, sendBanter, votePitch } from "@/lib/api";
-import type { BanterMessage } from "@/lib/types";
+import { createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, votePitch } from "@/lib/api";
+import type { BanterMessage, LobbyPlayer } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
 type Tab = "info" | "sets" | "banter";
@@ -37,13 +37,14 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
   const { token, user, hydrated } = useAuthStore();
   const isDemoId = id.startsWith("demo-");
   const { data, error: pitchError, isLoading, mutate: refreshPitch } = usePitch(isDemoId ? "" : id);
-  const demoPitch = DEMO_PITCHES.find((pitch) => pitch.id === id);
+  const demoPitch = DEMO_PITCHES.find((p) => p.id === id);
   const pitch = data ?? demoPitch;
   const isDemo = Boolean(isDemoId || pitch?.isDemo);
   const [tab, setTab] = useState<Tab>("info");
   const [actionError, setActionError] = useState("");
   const [actionNote, setActionNote] = useState("");
   const [voting, setVoting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [lobbyBusy, setLobbyBusy] = useState("");
   const [banterBusy, setBanterBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -52,6 +53,8 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
   const [lobbyTime, setLobbyTime] = useState("");
   const [lobbyPlayers, setLobbyPlayers] = useState("10");
   const [lobbyNote, setLobbyNote] = useState("");
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   const { data: banterData, error: banterError, isLoading: banterLoading, mutate: refreshBanter } = useBanter(isDemo ? "" : id);
   const { data: lobbyData, error: lobbyError, isLoading: lobbyLoading, mutate: refreshLobbies } = useLobbies();
 
@@ -61,6 +64,76 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
     const matching = (lobbyData || []).filter((item) => !item.pitchId || String(item.pitchId) === id);
     return matching.length ? matching : lobbyError ? DEMO_LOBBIES : [];
   }, [lobbyData, lobbyError, isDemo, id]);
+
+  const isBasketball = Boolean(
+    pitch && (pitch.sportType === "BASKETBALL" || pitch.name.toLowerCase().includes("basketball") || pitch.name.toLowerCase().includes("court"))
+  );
+
+  async function handlePhotoUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!token) {
+      setActionError("Please log in to upload a photo of this ground.");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setActionError("Please select a valid image file.");
+      return;
+    }
+
+    setActionError("");
+    setActionNote("");
+    setUploadingImage(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = async () => {
+          const canvas = document.createElement("canvas");
+          const maxDim = 900;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.82);
+            try {
+              await updatePitchImage(id, compressed);
+              setActionNote("Ground photo uploaded successfully! Real view now visible.");
+              await refreshPitch();
+            } catch (err) {
+              setActionError(err instanceof Error ? err.message : "Failed to save photo.");
+            } finally {
+              setUploadingImage(false);
+            }
+          }
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setUploadingImage(false);
+      setActionError("Error processing photo.");
+    }
+  }
 
   async function handleVote(isUp: boolean) {
     if (!pitch || isDemo) return;
@@ -139,13 +212,59 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
   if (!pitch) return <AppFrame><div className="detail-not-found"><p className="eyebrow">PITCH NOT AVAILABLE</p><h1>GROUND<br /><em>UNKNOWN.</em></h1>{pitchError ? <Notice tone="warning" className="detail-notice">Unable to load this pitch. {pitchError.message}</Notice> : <p className="pitch-description">This pitch may have moved or the ID may be incorrect.</p>}<div className="button-row"><button type="button" className="button button--outline" onClick={() => void refreshPitch()}>RETRY</button><Link href="/" className="button button--green">BACK TO FEED <ArrowUpRight size={16} /></Link></div></div></AppFrame>;
 
   const verified = pitch.verificationStatus.toUpperCase() === "COMMUNITY_VERIFIED";
+  const directionsUrl = getDirectionsUrl(pitch);
 
   return <AppFrame>
     <Link href="/" className="back-link"><ArrowLeft size={15} /> BACK TO THE LIST</Link>
     <section className="detail-hero">
-      <MapPlaceholder large />
-      <div className="detail-hero__top"><StatusBadge status={pitch.activeStatus} /><span className={`verification-tag${verified ? " is-verified" : " is-ghost"}`}>{verified ? <><ShieldCheck size={14} /> COMMUNITY VERIFIED</> : "👻 GHOST PITCH"}</span></div>
-      <div className="detail-hero__caption"><p className="eyebrow">ANAMBRA / FIELD REPORT</p><h1>{pitch.name}</h1><p><MapPin size={14} /> {pitch.area || pitch.address || "Anambra State"}</p></div>
+      {pitch.imageUrl ? (
+        <img src={pitch.imageUrl} alt={pitch.name} className="detail-hero__image" />
+      ) : (
+        <MapPlaceholder large />
+      )}
+      <div className="detail-hero__top">
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <StatusBadge status={pitch.activeStatus} />
+          <span className="sport-pill">{isBasketball ? "🏀 BASKETBALL" : "⚽ FOOTBALL"}</span>
+        </div>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <button
+            type="button"
+            className="hero-photo-btn"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingImage || isDemo}
+            title="Add or update ground photo"
+          >
+            <Camera size={13} /> {uploadingImage ? "SAVING..." : pitch.imageUrl ? "CHANGE PHOTO" : "ADD PHOTO"}
+          </button>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handlePhotoUpload}
+          />
+          <span className={`verification-tag${verified ? " is-verified" : " is-ghost"}`}>
+            {verified ? <><ShieldCheck size={14} /> COMMUNITY VERIFIED</> : "👻 GHOST PITCH"}
+          </span>
+        </div>
+      </div>
+      <div className="detail-hero__caption">
+        <p className="eyebrow">ANAMBRA / FIELD REPORT</p>
+        <h1>{pitch.name}</h1>
+        <p><MapPin size={14} /> {pitch.area || pitch.address || "Anambra State"}</p>
+        <div className="hero-actions-row">
+          <a
+            href={directionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hero-directions-link"
+            aria-label={`Get turn-by-turn directions to ${pitch.name}`}
+          >
+            <Navigation size={14} /> GET DIRECTIONS (GOOGLE MAPS)
+          </a>
+        </div>
+      </div>
     </section>
     {isDemo && <Notice tone="warning" className="offline-notice"><strong>SAMPLE PREVIEW</strong><span>This is demo content; connect the API for live pitch data and actions.</span></Notice>}
     {pitchError && !isDemo && <Notice tone="warning" className="offline-notice"><strong>API ERROR</strong><span>{pitchError.message}</span><button type="button" onClick={() => void refreshPitch()}>RETRY</button></Notice>}
@@ -163,8 +282,22 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
 
     {tab === "info" && <section className="tab-panel info-panel" role="tabpanel">
       <div className="info-panel__heading"><p className="eyebrow">THE GROUND CHECK</p><h2>KNOW BEFORE<br /><em>YOU MOVE.</em></h2></div>
-      <p className="pitch-description">{pitch.description || "The local ground is on the board. Add a banter message or start a set to get the people moving."}</p>
-      <div className="info-location"><MapPin size={17} /><div><strong>{pitch.address || pitch.area || "Location not listed"}</strong><span>{pitch.area || pitch.city || "Anambra State"}</span></div></div>
+      <p className="pitch-description">{pitch.description || pitch.landmarkDescription || "The local ground is on the board. Add a banter message or start a set to get the people moving."}</p>
+      <div className="info-location">
+        <MapPin size={17} />
+        <div style={{ flex: 1 }}>
+          <strong>{pitch.address || pitch.area || "Location not listed"}</strong>
+          <span>{pitch.area || pitch.city || "Anambra State"}</span>
+        </div>
+        <a
+          href={directionsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="button button--outline info-directions-btn"
+        >
+          <Navigation size={13} /> DIRECTIONS
+        </a>
+      </div>
       {!verified && <div className="ghost-detail"><div><span>👻</span><div><strong>GHOST PITCH</strong><p>Community still needs to confirm this ground.</p></div></div><p className="ghost-detail__copy">Does ball fly here?</p></div>}
       <div className="vote-box"><div><p className="eyebrow">COMMUNITY CHECK</p><strong>Been here? Verify the ground.</strong></div><div className="vote-actions"><button type="button" onClick={() => void handleVote(true)} disabled={voting || isDemo} aria-label="Confirm this pitch is real"><Check size={18} /> YES</button><button type="button" onClick={() => void handleVote(false)} disabled={voting || isDemo} aria-label="Report this pitch for checking"><X size={18} /> NO</button></div></div>
       {isDemo && <p className="demo-explainer">Voting is disabled for sample preview data.</p>}
@@ -179,14 +312,75 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
       {!lobbyLoading && lobbies.length === 0 && <EmptyState title="No set on this ground yet.">Create the first one and get the ball moving.</EmptyState>}
       <div className="lobby-list">{lobbies.map((lobby) => {
         const isDemoLobby = lobby.id.startsWith("demo-") || isDemo;
-        const players = Array.isArray(lobby.players) ? lobby.players : [];
+        const players = Array.isArray(lobby.players) ? (lobby.players as LobbyPlayer[]) : [];
         const isJoined = Boolean(user && players.some((p: any) => (p?.id && (p.id === user.id || String(p.id) === String(user.id))) || (p?.alias && p.alias === user.alias) || p === user.alias));
+        
+        // Host reputation advantage
+        const hostRep = (typeof lobby.host === "object" && lobby.host ? (lobby.host as any).reputationScore : 0) || 0;
+        const isVerifiedSet = hostRep >= 50;
+
         return <article className="lobby-card" key={lobby.id}>
-          <div className="lobby-card__top"><span className="lobby-open"><i /> OPEN SET</span>{isDemoLobby && <span className="demo-tag demo-tag--inline">SAMPLE</span>}</div>
-          <h3>{lobby.title || "Local football set"}</h3>
+          <div className="lobby-card__top">
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <span className="lobby-open"><i /> OPEN SET</span>
+              {isVerifiedSet && (
+                <span className="verified-set-badge" title={`Senior host with ${hostRep} reputation`}>
+                  <Crown size={12} /> VERIFIED SET
+                </span>
+              )}
+            </div>
+            {isDemoLobby && <span className="demo-tag demo-tag--inline">SAMPLE</span>}
+          </div>
+          <h3>{lobby.title || "Local game set"}</h3>
           <p className="lobby-card__note">{lobby.note || "No extra notes. Check in with the host."}</p>
-          <div className="lobby-card__meta"><span><Clock3 size={14} /> {lobby.startsAt ? displayTime(lobby.startsAt) : lobby.date || "Time not listed"}</span><span><Users size={14} /> {lobby.playerCount || players.length}/{lobby.maxPlayers || "?"}</span></div>
-          <div className="player-stack" aria-label={`${players.length} players in set`}>{players.slice(0, 5).map((player, index) => { const name = typeof player === "string" ? player : (player.alias as string) || "P"; return <span key={`${lobby.id}-${index}`} title={name}>{name.slice(0, 1).toUpperCase()}</span>; })}<small>{players.length ? `${players.length} IN` : "BE FIRST IN"}</small></div>
+          <div className="lobby-card__meta">
+            <span><Clock3 size={14} /> {lobby.startsAt ? displayTime(lobby.startsAt) : lobby.date || "Time not listed"}</span>
+            <span><Users size={14} /> {lobby.playerCount || players.length}/{lobby.maxPlayers || "?"}</span>
+            {lobby.host && typeof lobby.host === "object" && (
+              <span className="lobby-host-pill" title={`Hosted by ${(lobby.host as any).alias} (Rep: ${hostRep})`}>
+                HOST: {(lobby.host as any).alias} {hostRep >= 50 ? "⭐" : ""}
+              </span>
+            )}
+          </div>
+
+          {/* Roster Sheet with Senior Man / Captain Advantage */}
+          <div className="lobby-roster">
+            <div className="lobby-roster__heading">
+              <span>SQUAD LIST ({players.length}/{lobby.maxPlayers || 10})</span>
+              <small>ORDERED BY REPUTATION</small>
+            </div>
+            <div className="lobby-roster__list">
+              {players.map((player: any, idx: number) => {
+                const pName = typeof player === "string" ? player : (player.alias || "Player");
+                const pRep = typeof player === "object" ? (player.reputationScore ?? 10) : 10;
+                const isCaptain = idx === 0 && players.length > 0;
+                const isSeniorMan = pRep >= 50;
+                return (
+                  <div key={`${lobby.id}-p-${idx}`} className={`roster-player ${isCaptain ? "roster-player--captain" : ""}`}>
+                    <span className="roster-player__rank">#{idx + 1}</span>
+                    <div className="roster-player__body">
+                      <strong>{pName}</strong>
+                      <span className="roster-player__rep">⭐ {pRep} REP</span>
+                    </div>
+                    {isCaptain && (
+                      <span className="captain-pill" title="Set Captain (Highest reputation in squad)">
+                        <Crown size={10} /> CAPTAIN
+                      </span>
+                    )}
+                    {!isCaptain && isSeniorMan && (
+                      <span className="senior-pill" title="Senior Man (50+ reputation)">
+                        ⭐ SENIOR MAN
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              {players.length === 0 && (
+                <div className="roster-empty">No players registered yet. Be first to take the captain spot!</div>
+              )}
+            </div>
+          </div>
+
           {isJoined ? (
             <button type="button" className="button button--outline button--full lobby-join" disabled={isDemoLobby || lobbyBusy === lobby.id} onClick={() => void handleLeave(lobby.id)}>{lobbyBusy === lobby.id ? <LoaderCircle className="spin" size={16} /> : <X size={16} />} LEAVE THE SET</button>
           ) : (

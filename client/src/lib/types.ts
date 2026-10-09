@@ -6,9 +6,12 @@ export interface Pitch {
   name: string;
   sportType?: SportType;
   description?: string;
+  landmarkDescription?: string;
   address?: string;
   area?: string;
   city?: string;
+  latitude?: number;
+  longitude?: number;
   activeStatus: PitchActiveStatus;
   verificationStatus: PitchVerificationStatus;
   imageUrl?: string;
@@ -63,6 +66,16 @@ export interface BanterMessage {
   [key: string]: unknown;
 }
 
+export interface LobbyPlayer {
+  id?: string | number;
+  alias?: string;
+  reputationScore?: number;
+  avatarUrl?: string;
+  position?: string;
+  isHost?: boolean;
+  isCaptain?: boolean;
+}
+
 export interface Lobby {
   id: string;
   pitchId?: string | number;
@@ -71,7 +84,9 @@ export interface Lobby {
   date?: string;
   maxPlayers?: number;
   playerCount?: number;
-  players?: Array<AuthUser | string>;
+  players?: Array<LobbyPlayer | AuthUser | string>;
+  host?: LobbyPlayer | AuthUser;
+  hostUserId?: number;
   note?: string;
   status?: string;
   [key: string]: unknown;

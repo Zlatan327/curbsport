@@ -1,4 +1,4 @@
-import type { AuthResponse, AuthUser, BanterMessage, LeaderboardEntry, Lobby, Pitch, UserStats } from "@/lib/types";
+import type { AuthResponse, AuthUser, BanterMessage, LeaderboardEntry, Lobby, LobbyPlayer, Pitch, SportType, UserStats } from "@/lib/types";
 
 export const TOKEN_KEY = "inside-life-token";
 export const USER_KEY = "inside-life-user";
@@ -86,20 +86,46 @@ function asList(value: unknown, keys: string[]): unknown[] {
   return [];
 }
 
+export function getDirectionsUrl(pitch: {
+  name: string;
+  latitude?: number;
+  longitude?: number;
+  address?: string;
+  area?: string;
+}): string {
+  if (pitch.latitude && pitch.longitude) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${pitch.latitude},${pitch.longitude}`;
+  }
+  const query = `${pitch.name}, ${pitch.address || pitch.area || ""}, Nigeria`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+}
+
 export function normalizePitch(value: unknown): Pitch {
   const root = asRecord(value);
   const record = (root.pitch && typeof root.pitch === "object" ? asRecord(root.pitch) : root);
   const stats = asRecord(record.stats);
   const count = asRecord(record._count);
+
+  const rawSport = String(record.sportType ?? "").toUpperCase();
+  const nameLower = String(record.name ?? "").toLowerCase();
+  const isBball = rawSport === "BASKETBALL" || nameLower.includes("basketball") || nameLower.includes("hoop");
+  const sportType: SportType = isBball ? "BASKETBALL" : "FOOTBALL";
+
+  const lat = record.latitude !== undefined && record.latitude !== null ? Number(record.latitude) : undefined;
+  const lng = record.longitude !== undefined && record.longitude !== null ? Number(record.longitude) : undefined;
+
   return {
     ...(record as Partial<Pitch>),
     id: String(record.id ?? record._id ?? "unknown"),
     name: String(record.name ?? record.title ?? record.pitchName ?? "Unnamed pitch"),
+    sportType,
     description: typeof record.description === "string" ? record.description : (typeof record.landmarkDescription === "string" ? record.landmarkDescription : undefined),
+    landmarkDescription: typeof record.landmarkDescription === "string" ? record.landmarkDescription : undefined,
     address: String(record.address ?? record.landmarkDescription ?? record.locationName ?? record.location ?? "Location not listed"),
     area: typeof record.area === "string" ? record.area : undefined,
     city: typeof record.city === "string" ? record.city : undefined,
-    sportType: (String(record.sportType ?? "FOOTBALL").toUpperCase() as any),
+    latitude: typeof lat === "number" && !isNaN(lat) ? lat : undefined,
+    longitude: typeof lng === "number" && !isNaN(lng) ? lng : undefined,
     activeStatus: String(record.activeStatus ?? record.status ?? "DRY").toUpperCase(),
     verificationStatus: String(record.verificationStatus ?? record.verification ?? "GHOST").toUpperCase(),
     imageUrl: typeof record.imageUrl === "string" ? record.imageUrl : undefined,
@@ -137,11 +163,37 @@ export function normalizeLobbies(value: unknown): Lobby[] {
   return asList(value, ["lobbies", "data"]).map((item, index) => {
     const record = asRecord(item);
     const count = record._count && typeof record._count === "object" ? (record._count as any).members : undefined;
-    const members = Array.isArray(record.members)
+    const rawMembers = Array.isArray(record.members)
       ? record.members.map((m: any) => m.user || m)
       : Array.isArray(record.players)
       ? record.players
       : [];
+    const hostRec = record.host && typeof record.host === "object" ? asRecord(record.host) : undefined;
+
+    const players: LobbyPlayer[] = rawMembers.map((m: any) => {
+      if (typeof m === "string") {
+        return { alias: m, reputationScore: 10 };
+      }
+      const rec = asRecord(m);
+      const pid = rec.id !== undefined && rec.id !== null ? (typeof rec.id === "number" ? rec.id : String(rec.id)) : undefined;
+      return {
+        id: pid,
+        alias: String(rec.alias || rec.name || "Player"),
+        reputationScore: Number(rec.reputationScore ?? 10),
+        avatarUrl: typeof rec.avatarUrl === "string" ? rec.avatarUrl : undefined,
+      };
+    });
+
+    // Sort players by reputation descending (advantage: senior players lead the set)
+    players.sort((a, b) => (b.reputationScore ?? 0) - (a.reputationScore ?? 0));
+
+    const hostPlayer: LobbyPlayer | undefined = hostRec ? {
+      id: hostRec.id !== undefined && hostRec.id !== null ? (typeof hostRec.id === "number" ? hostRec.id : String(hostRec.id)) : undefined,
+      alias: String(hostRec.alias || "Host"),
+      reputationScore: Number(hostRec.reputationScore ?? 10),
+      avatarUrl: typeof hostRec.avatarUrl === "string" ? hostRec.avatarUrl : undefined,
+    } : undefined;
+
     return {
       ...(record as Partial<Lobby>),
       id: String(record.id ?? record._id ?? index),
@@ -149,8 +201,9 @@ export function normalizeLobbies(value: unknown): Lobby[] {
       title: String(record.teamName ?? record.title ?? record.name ?? "Open set"),
       startsAt: String(record.scheduledAt ?? record.startsAt ?? ""),
       maxPlayers: Number(record.maxPlayers ?? 10),
-      playerCount: Number(count ?? record.playerCount ?? members.length),
-      players: members,
+      playerCount: Number(count ?? record.playerCount ?? players.length),
+      players,
+      host: hostPlayer,
       note: typeof record.teamName === "string" ? record.teamName : (typeof record.note === "string" ? record.note : undefined),
       status: String(record.status ?? "BUILDING"),
     };
@@ -199,8 +252,18 @@ export async function createPitch(payload: {
   priceBracket?: string;
   latitude?: number;
   longitude?: number;
+  imageUrl?: string;
+  sportType?: 'FOOTBALL' | 'BASKETBALL';
 }): Promise<Pitch> {
   return normalizePitch(await apiFetch<unknown>("/pitches", { method: "POST", body: JSON.stringify(payload) }));
+}
+
+export async function updatePitchImage(pitchId: string | number, imageUrl: string): Promise<Pitch> {
+  const res = await apiFetch<{ pitch: unknown }>(`/pitches/${encodeURIComponent(pitchId)}/image`, {
+    method: "PATCH",
+    body: JSON.stringify({ imageUrl }),
+  });
+  return normalizePitch(res.pitch || res);
 }
 
 export async function getBanter(pitchId: string): Promise<BanterMessage[]> {

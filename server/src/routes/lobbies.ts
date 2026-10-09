@@ -40,11 +40,33 @@ lobbyRouter.get('/', async (req: Request, res: Response) => {
       where,
       orderBy: { scheduledAt: 'asc' },
       include: {
-        host: { select: { alias: true } },
-        pitch: { select: { name: true, schoolId: true } },
+        host: {
+          select: {
+            id: true,
+            alias: true,
+            reputationScore: true,
+            avatarUrl: true,
+            primarySport: true,
+            footballPosition: true,
+            basketballPosition: true,
+          },
+        },
+        pitch: { select: { name: true, schoolId: true, sportType: true } },
         _count: { select: { members: true } },
         members: {
-          select: { user: { select: { alias: true, id: true } } },
+          select: {
+            user: {
+              select: {
+                id: true,
+                alias: true,
+                reputationScore: true,
+                avatarUrl: true,
+                primarySport: true,
+                footballPosition: true,
+                basketballPosition: true,
+              },
+            },
+          },
         },
       },
     });
@@ -91,9 +113,34 @@ lobbyRouter.post('/', authMiddleware, validate(createLobbySchema), async (req: A
         },
       },
       include: {
-        host: { select: { alias: true } },
+        host: {
+          select: {
+            id: true,
+            alias: true,
+            reputationScore: true,
+            avatarUrl: true,
+            primarySport: true,
+            footballPosition: true,
+            basketballPosition: true,
+          },
+        },
         _count: { select: { members: true } },
-        pitch: { select: { schoolId: true, name: true } }
+        pitch: { select: { schoolId: true, name: true, sportType: true } },
+        members: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                alias: true,
+                reputationScore: true,
+                avatarUrl: true,
+                primarySport: true,
+                footballPosition: true,
+                basketballPosition: true,
+              },
+            },
+          },
+        },
       },
     });
 
