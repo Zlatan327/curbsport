@@ -101,8 +101,11 @@ export default function AddPitchPage() {
         schoolId: Number(user?.schoolId || 1),
       });
       const draft = { ...result.data, sportType, status, imageUrl, mapX: pin.x, mapY: pin.y, createdAt: new Date().toISOString(), savedLocally: true };
-      const savedDrafts = JSON.parse(window.localStorage.getItem("inside-life-pitch-drafts") || "[]") as unknown[];
-      window.localStorage.setItem("inside-life-pitch-drafts", JSON.stringify([draft, ...savedDrafts]));
+      const draftsRaw = window.localStorage.getItem("curbsport-pitch-drafts") || window.localStorage.getItem("inside-life-pitch-drafts") || "[]";
+      const savedDrafts = JSON.parse(draftsRaw) as unknown[];
+      const updatedDrafts = JSON.stringify([draft, ...savedDrafts]);
+      window.localStorage.setItem("curbsport-pitch-drafts", updatedDrafts);
+      window.localStorage.setItem("inside-life-pitch-drafts", updatedDrafts);
       setSaved(true);
       setName(""); setArea(""); setAddress(""); setDescription(""); setImageUrl(null);
     } catch (err: any) {
@@ -232,7 +235,7 @@ export default function AddPitchPage() {
         <Notice tone="info" className="map-disclaimer">This pins the ground to your active campus. Other ballers nearby will be notified.</Notice>
         <AsyncButton type="submit" busy={busy} className="button--full"><Save size={16} /> PUBLISH GROUND <ArrowUpRight size={17} /></AsyncButton>
       </form>
-      <div className="add-footnote">LIVE ON INSIDE LIFE · SYNCS DIRECTLY WITH CAMPUS RADAR</div>
+      <div className="add-footnote">LIVE ON CURBSPORT · SYNCS DIRECTLY WITH CAMPUS RADAR</div>
     </>}
   </AppFrame>;
 }

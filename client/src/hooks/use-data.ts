@@ -11,6 +11,25 @@ export function usePitches(schoolId: string) {
 }
 
 export function usePitch(id: string) {
+  const { mutate } = useSWRConfig();
+
+  useEffect(() => {
+    if (!id) return;
+    const socket = getSocket();
+
+    const handlePitchUpdate = () => {
+      mutate(["pitch", id]);
+    };
+
+    socket.on("pitch:ball_spotted", handlePitchUpdate);
+    socket.on("pitch:status_updated", handlePitchUpdate);
+
+    return () => {
+      socket.off("pitch:ball_spotted", handlePitchUpdate);
+      socket.off("pitch:status_updated", handlePitchUpdate);
+    };
+  }, [id, mutate]);
+
   return useSWR(id ? ["pitch", id] : null, ([, pitchId]) => getPitch(pitchId));
 }
 

@@ -38,6 +38,7 @@ const configuredOrigins = process.env.CLIENT_URL
 const isAllowedOrigin = (origin: string | undefined): boolean => {
   if (!origin) return true;
   if (configuredOrigins.includes(origin)) return true;
+  if (origin === 'https://curbsport.vercel.app') return true;
   if (origin === 'https://insidelife.vercel.app') return true;
   if (origin.endsWith('.vercel.app')) return true;
   if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
@@ -88,7 +89,7 @@ const server = createServer(app);
 initSocket(server);
 
 server.listen(PORT, () => {
-  console.log(`🚀 Inside Life server & Socket.IO running on port ${PORT}`);
+  console.log(`🚀 Curbsport server & Socket.IO running on port ${PORT}`);
 });
 
 export default app;

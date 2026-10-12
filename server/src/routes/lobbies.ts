@@ -298,19 +298,37 @@ lobbyRouter.post('/:id/leave', authMiddleware, async (req: AuthRequest, res: Res
 
     const lobby = await prisma.matchLobby.findUnique({
       where: { id: lobbyId },
-      include: { _count: { select: { members: true } } },
+      include: {
+        _count: { select: { members: true } },
+        host: { select: { hasBall: true } },
+        members: {
+          select: {
+            user: { select: { hasBall: true } },
+          },
+        },
+      },
     });
 
     if (lobby) {
       let newStatus: LobbyStatus = lobby.status;
       if (lobby.status === 'FULL' && lobby._count.members < lobby.maxPlayers) {
         newStatus = 'BUILDING';
-        await prisma.matchLobby.update({
-          where: { id: lobbyId },
-          data: { status: 'BUILDING' },
-        });
       }
-      getIO().to(`pitch:${lobby.pitchId}`).emit('lobby:updated', { ...lobby, status: newStatus });
+
+      // Re-evaluate if host or any remaining member still has equipment
+      const hostHasBall = Boolean(lobby.host?.hasBall);
+      const memberHasBall = lobby.members.some((m) => Boolean(m.user?.hasBall));
+      const stillHasBall = hostHasBall || memberHasBall;
+
+      await prisma.matchLobby.update({
+        where: { id: lobbyId },
+        data: {
+          status: newStatus,
+          hasBall: stillHasBall,
+        },
+      });
+
+      getIO().to(`pitch:${lobby.pitchId}`).emit('lobby:updated', { ...lobby, status: newStatus, hasBall: stillHasBall });
     }
 
     res.json({ message: 'Left lobby' });

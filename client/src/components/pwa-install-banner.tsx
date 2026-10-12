@@ -20,7 +20,7 @@ export function PwaInstallBanner() {
     if (isStandalone) return;
 
     // Check if user dismissed prompt recently
-    const dismissedUntil = localStorage.getItem('inside-life-pwa-dismissed');
+    const dismissedUntil = localStorage.getItem('curbsport-pwa-dismissed') || localStorage.getItem('inside-life-pwa-dismissed');
     if (dismissedUntil && Number(dismissedUntil) > Date.now()) return;
 
     // Detect iOS
@@ -68,10 +68,9 @@ export function PwaInstallBanner() {
     setShowBanner(false);
     setShowIosGuide(false);
     // Dismiss for 5 days
-    localStorage.setItem(
-      'inside-life-pwa-dismissed',
-      String(Date.now() + 5 * 24 * 60 * 60 * 1000)
-    );
+    const expiry = String(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    localStorage.setItem('curbsport-pwa-dismissed', expiry);
+    localStorage.setItem('inside-life-pwa-dismissed', expiry);
   };
 
   if (!showBanner) return null;
@@ -83,7 +82,7 @@ export function PwaInstallBanner() {
           <Smartphone size={18} />
         </div>
         <div className="pwa-banner__content">
-          <strong>INSTALL INSIDE LIFE</strong>
+          <strong>INSTALL CURBSPORT</strong>
           <span>Instant pitch radar & 1-tap sets from your home screen</span>
         </div>
         <div className="pwa-banner__actions">
@@ -120,7 +119,7 @@ export function PwaInstallBanner() {
               </button>
             </div>
             <p className="ios-pwa-modal__desc">
-              Add Inside Life to your Home Screen for zero-delay ball alerts:
+              Add Curbsport to your Home Screen for zero-delay ball alerts:
             </p>
             <ol className="ios-pwa-steps">
               <li>

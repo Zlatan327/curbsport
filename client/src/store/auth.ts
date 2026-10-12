@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { clearSessionStorage, fetchMe, saveSession, TOKEN_KEY, USER_KEY } from "@/lib/api";
+import { clearSessionStorage, fetchMe, readStoredUser, readToken, saveSession } from "@/lib/api";
 import type { AuthUser } from "@/lib/types";
 
 interface AuthState {
@@ -17,14 +17,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   hydrated: false,
   hydrate: () => {
     if (typeof window === "undefined") return;
-    const token = window.localStorage.getItem(TOKEN_KEY);
-    let user: AuthUser | null = null;
-    try {
-      const saved = window.localStorage.getItem(USER_KEY);
-      user = saved ? (JSON.parse(saved) as AuthUser) : null;
-    } catch {
-      window.localStorage.removeItem(USER_KEY);
-    }
+    const token = readToken();
+    const user = readStoredUser();
     set({ token, user, hydrated: true });
 
     // Background refresh latest profile from DB to keep avatar, biometrics & ball status current

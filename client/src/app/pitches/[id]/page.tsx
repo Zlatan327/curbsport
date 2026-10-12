@@ -51,6 +51,7 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
   const [actionNote, setActionNote] = useState("");
   const [voting, setVoting] = useState(false);
   const [ballChecking, setBallChecking] = useState(false);
+  const [showBallLeavingModal, setShowBallLeavingModal] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [lobbyBusy, setLobbyBusy] = useState("");
   const [balancedLobbyId, setBalancedLobbyId] = useState<string | null>(null);
@@ -157,17 +158,25 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
     } finally { setVoting(false); }
   }
 
-  async function handleBallCheckin(hasBallNow = true) {
-    if (!token) return setActionError("Log in before checking in match equipment.");
+  async function handleBallCheckin(
+    hasBallNow = true,
+    reason?: 'BALL_LEAVING' | 'CHECKED_OUT' | 'ACCIDENTAL_CLICK' | 'MATCH_ENDED' | 'BALL_ARRIVED'
+  ) {
+    if (!token) return setActionError("Log in before updating match equipment status.");
     if (isDemo) return setActionError("Match equipment check-in is disabled in sample mode.");
     setActionError(""); setActionNote(""); setBallChecking(true);
     try {
-      await checkinBall(id, hasBallNow);
+      const res = await checkinBall(id, hasBallNow, reason);
       if (hasBallNow) {
-        setActionNote(isBasketball ? "🏀 You're the MVP! Ball checked in on court. +10 REP awarded!" : "⚽ You're the MVP! Match ball reported on ground. +10 REP awarded!");
+        setActionNote(res.message || (isBasketball ? "🏀 You're the MVP! Ball checked in on court. +10 REP awarded!" : "⚽ You're the MVP! Match ball reported on ground. +10 REP awarded!"));
       } else {
-        setActionNote("Equipment status cleared.");
+        if (reason === 'ACCIDENTAL_CLICK') {
+          setActionNote("Ball check-in undone without penalty (oversight reverted).");
+        } else {
+          setActionNote(isBasketball ? "🏀 Equipment status cleared — campus notified that basketball has left the court." : "⚽ Equipment status cleared — campus notified that ball has left the ground.");
+        }
       }
+      setShowBallLeavingModal(false);
       await refreshPitch();
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : "Could not update ball status.");
@@ -340,24 +349,40 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
           >
             <Navigation size={14} /> GET DIRECTIONS (GOOGLE MAPS)
           </a>
-          <button
-            type="button"
-            className="ball-checkin-btn"
-            disabled={ballChecking || isDemo}
-            onClick={() => void handleBallCheckin(!pitch.hasBallNow)}
-            title="Check in with match equipment to alert campus and earn +10 REP"
-          >
-            {ballChecking ? (
-              <LoaderCircle className="spin" size={13} />
-            ) : isBasketball ? (
-              <span>🏀</span>
-            ) : (
-              <span>⚽</span>
-            )}
-            {pitch.hasBallNow
-              ? (isBasketball ? "BALL ON COURT (CONFIRMED)" : "BALL DEY GROUND (CONFIRMED)")
-              : (isBasketball ? "I DEY WITH BASKETBALL" : "I DEY GROUND WITH BALL")}
-          </button>
+          {pitch.hasBallNow ? (
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <span className="ball-confirmed-badge">
+                {isBasketball ? "🏀 BALL ON COURT" : "⚽ BALL DEY GROUND"}
+              </span>
+              <button
+                type="button"
+                className="ball-leaving-btn"
+                disabled={ballChecking || isDemo}
+                onClick={() => setShowBallLeavingModal(true)}
+                title="Report that the match ball is leaving or turn off equipment status"
+              >
+                {ballChecking ? <LoaderCircle className="spin" size={12} /> : <span>🏃</span>}
+                <span>BALL LEAVING? TURN OFF</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="ball-checkin-btn"
+              disabled={ballChecking || isDemo}
+              onClick={() => void handleBallCheckin(true)}
+              title="Check in with match equipment to alert campus and earn +10 REP"
+            >
+              {ballChecking ? (
+                <LoaderCircle className="spin" size={13} />
+              ) : isBasketball ? (
+                <span>🏀</span>
+              ) : (
+                <span>⚽</span>
+              )}
+              {isBasketball ? "I DEY WITH BASKETBALL" : "I DEY GROUND WITH BALL"}
+            </button>
+          )}
         </div>
       </div>
     </section>
@@ -390,15 +415,15 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
           >
             <Share2 size={12} /> <span>BROADCAST</span>
           </button>
-          {token && user && pitch.ballBroughtBy === user.alias && (
+          {token && (
             <button
               type="button"
-              className="button button--dark"
-              style={{ fontSize: "8px", padding: "4px 8px", minHeight: "26px" }}
-              disabled={ballChecking}
-              onClick={() => void handleBallCheckin(false)}
+              className="beacon-leaving-btn"
+              disabled={ballChecking || isDemo}
+              onClick={() => setShowBallLeavingModal(true)}
+              title="Turn off ball on site status if ball is leaving"
             >
-              CLEAR
+              {user?.alias === pitch.ballBroughtBy ? "I'M LEAVING WITH BALL" : "REPORT BALL LEFT"}
             </button>
           )}
         </div>
@@ -753,6 +778,71 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
           await refreshPitch();
         }}
       />
+    )}
+
+    {showBallLeavingModal && (
+      <div className="match-modal-backdrop" onClick={() => setShowBallLeavingModal(false)}>
+        <div className="match-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+          <div className="match-modal-header">
+            <div>
+              <span className="match-modal-eyebrow">EQUIPMENT STATUS RADAR</span>
+              <h2>{isBasketball ? "IS BASKETBALL LEAVING COURT?" : "IS MATCH BALL LEAVING GROUND?"}</h2>
+              <span className="match-modal-subtitle">
+                {pitch.ballBroughtBy
+                  ? `Reported on ground by ${pitch.ballBroughtBy}.`
+                  : "Match equipment is currently flagged as active."}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="modal-close-btn"
+              onClick={() => setShowBallLeavingModal(false)}
+              aria-label="Close"
+              style={{ background: 'transparent', border: 'none', color: 'var(--smoke)', cursor: 'pointer' }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <p style={{ margin: 0, fontSize: "12px", color: "var(--smoke)", lineHeight: 1.5 }}>
+              Turning off <strong>Ball on Site</strong> updates the touchline banter and campus radar so players know match equipment is no longer available on this pitch.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "4px" }}>
+              <button
+                type="button"
+                className="button button--danger"
+                style={{ width: "100%", justifyContent: "center", padding: "10px", gap: "6px" }}
+                disabled={ballChecking}
+                onClick={() => void handleBallCheckin(false, "BALL_LEAVING")}
+              >
+                {ballChecking ? <LoaderCircle className="spin" size={14} /> : <span>🏃</span>}
+                <span>YES, BALL IS LEAVING / GONE</span>
+              </button>
+
+              <button
+                type="button"
+                className="button button--outline"
+                style={{ width: "100%", justifyContent: "center", padding: "8px", fontSize: "10px", gap: "6px" }}
+                disabled={ballChecking}
+                onClick={() => void handleBallCheckin(false, "ACCIDENTAL_CLICK")}
+              >
+                <span>⚡</span> ACCIDENTAL CLICK / MISTAKE (UNDO WITHOUT PENALTY)
+              </button>
+
+              <button
+                type="button"
+                className="button button--ghost"
+                style={{ width: "100%", justifyContent: "center", padding: "8px", fontSize: "10px", color: "var(--smoke)" }}
+                onClick={() => setShowBallLeavingModal(false)}
+              >
+                KEEP ACTIVE (BALL IS STILL HERE)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     )}
   </AppFrame>;
 }

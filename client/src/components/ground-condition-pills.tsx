@@ -134,7 +134,24 @@ export function GroundConditionPills({
 
     setReportingId(cond.id);
     const now = Date.now();
-    const updated = { ...activeReports, [cond.id]: now };
+    const isCurrentlyActive = Boolean(activeReports[cond.id]);
+
+    let updated: { [id: string]: number };
+    let broadcastMsg: string;
+    let toastMsg: string;
+
+    if (isCurrentlyActive) {
+      const copy = { ...activeReports };
+      delete copy[cond.id];
+      updated = copy;
+      broadcastMsg = `✅ Condition Cleared: "${cond.label}" is no longer active at this ground.`;
+      toastMsg = `Condition cleared: "${cond.label}" turned off.`;
+    } else {
+      updated = { ...activeReports, [cond.id]: now };
+      broadcastMsg = cond.broadcastText;
+      toastMsg = `Condition broadcasted: "${cond.label}" (+5 REP community shout)`;
+    }
+
     setActiveReports(updated);
     try {
       localStorage.setItem(`ground_conditions_${pitchId}`, JSON.stringify(updated));
@@ -145,16 +162,16 @@ export function GroundConditionPills({
     // Send banter announcement
     if (!isDemo && token) {
       try {
-        await sendBanter(pitchId, cond.broadcastText);
+        await sendBanter(pitchId, broadcastMsg);
         if (onConditionBroadcast) {
-          onConditionBroadcast(`Condition broadcasted: "${cond.label}" (+5 REP community shout)`);
+          onConditionBroadcast(toastMsg);
         }
       } catch {
         // ignore
       }
     } else {
       if (onConditionBroadcast) {
-        onConditionBroadcast(`Condition updated: "${cond.label}"`);
+        onConditionBroadcast(toastMsg);
       }
     }
 

@@ -261,16 +261,21 @@ pitchRouter.patch('/:id/image', authMiddleware, validate(updateImageSchema), asy
   }
 });
 
-// POST /api/pitches/:id/ball-checkin (Ball Owner ground check-in with perks)
+// Anti-exploit tracker: prevent infinite reputation farming via ball check-in / check-out toggling
+const ballCheckinRepHistory = new Map<string, { awardedAt: number; amount: number }>();
+
+// POST /api/pitches/:id/ball-checkin (Ball Owner ground check-in with perks & safe turn-off)
 const ballCheckinSchema = z.object({
   hasBallNow: z.boolean().default(true),
+  reason: z.enum(['BALL_LEAVING', 'CHECKED_OUT', 'ACCIDENTAL_CLICK', 'MATCH_ENDED', 'BALL_ARRIVED']).optional(),
+  note: z.string().max(100).optional(),
 });
 
 pitchRouter.post('/:id/ball-checkin', authMiddleware, validate(ballCheckinSchema), async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string, 10);
     const userId = req.user!.userId;
-    const { hasBallNow } = req.body;
+    const { hasBallNow, reason } = req.body;
 
     const existing = await prisma.pitch.findUnique({
       where: { id },
@@ -287,16 +292,36 @@ pitchRouter.post('/:id/ball-checkin', authMiddleware, validate(ballCheckinSchema
       return;
     }
 
+    const isBball = existing.sportType === 'BASKETBALL' || existing.name.toLowerCase().includes('basketball') || existing.name.toLowerCase().includes('court');
+    const equipmentLabel = isBball ? 'Basketball' : 'Match ball';
+    const locationLabel = isBball ? 'court' : 'ground';
+    const repKey = `${userId}:${id}`;
+
     let updatedPitch;
     if (hasBallNow) {
-      // Award ball owner +10 reputation score & flag user as ball owner
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          hasBall: true,
-          reputationScore: { increment: 10 },
-        },
-      });
+      const alreadyCheckedIn = Boolean(existing.hasBallNow);
+      const lastAward = ballCheckinRepHistory.get(repKey);
+      const cooldownMs = 2 * 60 * 60 * 1000; // 2 hour cooldown between check-in rewards
+      const isCooldownActive = Boolean(lastAward && (Date.now() - lastAward.awardedAt < cooldownMs));
+      let awardedRep = false;
+
+      if (!alreadyCheckedIn && !isCooldownActive) {
+        // Award ball owner +10 reputation score & flag user as ball owner
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            hasBall: true,
+            reputationScore: { increment: 10 },
+          },
+        });
+        ballCheckinRepHistory.set(repKey, { awardedAt: Date.now(), amount: 10 });
+        awardedRep = true;
+      } else {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { hasBall: true },
+        });
+      }
 
       updatedPitch = await prisma.pitch.update({
         where: { id },
@@ -314,40 +339,87 @@ pitchRouter.post('/:id/ball-checkin', authMiddleware, validate(ballCheckinSchema
         hasBallNow: true,
         ballBroughtBy: user.alias,
         ballReportedAt: new Date(),
-        message: `${user.alias} dey ground with ball!`,
+        reason: 'BALL_ARRIVED',
+        message: `${user.alias} dey ${locationLabel} with ${equipmentLabel.toLowerCase()}!`,
       });
+      getIO().to(`pitch:${id}`).emit('pitch:status_updated', updatedPitch);
 
       // Broadcast alert to whole campus
       getIO().to(`school:${existing.schoolId}`).emit('ball:alert', {
         pitchId: id,
         pitchName: existing.name,
+        hasBallNow: true,
         ballBroughtBy: user.alias,
-        message: `⚽ Match ball on ground at ${existing.name} (brought by ${user.alias})! Pull up!`,
+        message: `${isBball ? '🏀' : '⚽'} ${equipmentLabel} on ${locationLabel} at ${existing.name} (brought by ${user.alias})! Pull up!`,
       });
 
       res.json({
         pitch: updatedPitch,
-        message: `Ball checked in! You've been recognized as Ball Owner at ${existing.name}. +10 Reputation awarded!`,
+        message: awardedRep
+          ? `Ball checked in! You've been recognized as Ball Owner at ${existing.name}. +10 Reputation awarded!`
+          : `Ball confirmed on ${locationLabel} at ${existing.name}!`,
       });
     } else {
+      // Ball check-out / leaving or accidental click correction
+      const lastAward = ballCheckinRepHistory.get(repKey);
+      const wasRecentOwner = existing.ballBroughtBy === user.alias;
+      const isImmediateReversal = Boolean(lastAward && (Date.now() - lastAward.awardedAt < 5 * 60 * 1000));
+
+      if (wasRecentOwner && (reason === 'ACCIDENTAL_CLICK' || isImmediateReversal) && lastAward && lastAward.amount > 0) {
+        // Revert the mistakenly awarded reputation to prevent toggle exploits
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            reputationScore: { decrement: lastAward.amount },
+          },
+        });
+        ballCheckinRepHistory.delete(repKey);
+      }
+
+      // Check active lobbies to determine appropriate activeStatus
+      const activeLobbiesCount = await prisma.matchLobby.count({
+        where: {
+          pitchId: id,
+          status: { in: ['ACTIVE', 'BUILDING'] },
+        },
+      });
+      const newActiveStatus = activeLobbiesCount > 0 ? 'BUILDING' : 'DRY';
+
       updatedPitch = await prisma.pitch.update({
         where: { id },
         data: {
           hasBallNow: false,
           ballBroughtBy: null,
           ballReportedAt: null,
+          activeStatus: existing.activeStatus === 'LIVE' ? newActiveStatus : existing.activeStatus,
         },
       });
+
+      const leavingMessage = reason === 'ACCIDENTAL_CLICK'
+        ? `⚠️ Ball check-in at ${existing.name} was marked as accidental click and cleared by ${user.alias}.`
+        : `🏃 ${equipmentLabel} at ${existing.name} is leaving / no longer on ${locationLabel} (reported by ${user.alias}).`;
 
       getIO().to(`pitch:${id}`).emit('pitch:ball_spotted', {
         pitchId: id,
         hasBallNow: false,
-        message: `Ball check-out recorded.`,
+        reportedBy: user.alias,
+        reason: reason || 'BALL_LEAVING',
+        message: leavingMessage,
+      });
+      getIO().to(`pitch:${id}`).emit('pitch:status_updated', updatedPitch);
+
+      getIO().to(`school:${existing.schoolId}`).emit('ball:alert', {
+        pitchId: id,
+        pitchName: existing.name,
+        hasBallNow: false,
+        message: leavingMessage,
       });
 
       res.json({
         pitch: updatedPitch,
-        message: 'Ball status reset.',
+        message: reason === 'ACCIDENTAL_CLICK'
+          ? 'Ball status reset and mistake undone.'
+          : 'Ball check-out recorded — community notified that equipment has left.',
       });
     }
   } catch (err) {

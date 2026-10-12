@@ -63,7 +63,7 @@ export function HowToUseModal({ isOpen, onClose }: HowToUseModalProps) {
 
         <p className="eyebrow" style={{ color: '#00f076', marginBottom: '4px' }}>THE GROUND CODE</p>
         <h2 style={{ fontSize: '1.4rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '1.25rem' }}>
-          HOW TO PLAY ON INSIDE LIFE
+          HOW TO PLAY ON CURBSPORT
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

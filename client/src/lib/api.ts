@@ -1,8 +1,12 @@
 import type { AuthResponse, AuthUser, BanterMessage, LeaderboardEntry, Lobby, LobbyPlayer, MatchResult, MatchStat, Pitch, SportType, UserStats } from "@/lib/types";
 
-export const TOKEN_KEY = "inside-life-token";
-export const USER_KEY = "inside-life-user";
-export const CITY_ID_KEY = "inside-life-city-id";
+export const TOKEN_KEY = "curbsport-token";
+export const LEGACY_TOKEN_KEY = "inside-life-token";
+export const USER_KEY = "curbsport-user";
+export const LEGACY_USER_KEY = "inside-life-user";
+export const CITY_ID_KEY = "curbsport-city-id";
+export const LEGACY_CITY_ID_KEY = "inside-life-city-id";
+
 export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === "production" ? "https://insidelife.onrender.com/api" : "http://localhost:4000/api")
@@ -22,17 +26,32 @@ export class ApiError extends Error {
 
 export function readToken(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+  return window.localStorage.getItem(TOKEN_KEY) || window.localStorage.getItem(LEGACY_TOKEN_KEY);
+}
+
+export function readStoredUser(): AuthUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(USER_KEY) || window.localStorage.getItem(LEGACY_USER_KEY);
+    return raw ? (JSON.parse(raw) as AuthUser) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function saveSession(token: string, user: AuthUser): void {
   window.localStorage.setItem(TOKEN_KEY, token);
   window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+  // Mirror to legacy keys so existing browser tabs and previous versions remain authenticated
+  window.localStorage.setItem(LEGACY_TOKEN_KEY, token);
+  window.localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(user));
 }
 
 export function clearSessionStorage(): void {
   window.localStorage.removeItem(TOKEN_KEY);
   window.localStorage.removeItem(USER_KEY);
+  window.localStorage.removeItem(LEGACY_TOKEN_KEY);
+  window.localStorage.removeItem(LEGACY_USER_KEY);
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -332,10 +351,14 @@ export async function updatePitchImage(pitchId: string | number, imageUrl: strin
   return normalizePitch(res.pitch || res);
 }
 
-export async function checkinBall(pitchId: string | number, hasBallNow: boolean = true): Promise<{ pitch: Pitch; message: string }> {
+export async function checkinBall(
+  pitchId: string | number,
+  hasBallNow: boolean = true,
+  reason?: 'BALL_LEAVING' | 'CHECKED_OUT' | 'ACCIDENTAL_CLICK' | 'MATCH_ENDED' | 'BALL_ARRIVED'
+): Promise<{ pitch: Pitch; message: string }> {
   const res = await apiFetch<{ pitch: unknown; message: string }>(`/pitches/${encodeURIComponent(pitchId)}/ball-checkin`, {
     method: "POST",
-    body: JSON.stringify({ hasBallNow }),
+    body: JSON.stringify({ hasBallNow, reason }),
   });
   return {
     pitch: normalizePitch(res.pitch || res),

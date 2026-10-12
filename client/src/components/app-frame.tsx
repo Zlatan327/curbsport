@@ -34,9 +34,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
     };
 
     socket.on("n1p:alert", handleAlert);
+    socket.on("ball:alert", handleAlert);
 
     return () => {
       socket.off("n1p:alert", handleAlert);
+      socket.off("ball:alert", handleAlert);
     };
   }, [schoolId]);
 
