@@ -1,0 +1,6 @@
+packages:
+  - "."
+
+# The ESLint TypeScript resolver needs this optional native binding at runtime.
+allowBuilds:
+  unrs-resolver: true
