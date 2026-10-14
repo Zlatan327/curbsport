@@ -1,11 +1,1 @@
-{
-  "routes": [
-    { "path": "/", "title": "Feed · Curbsport" },
-    { "path": "/map", "title": "Pitch Map · Curbsport" },
-    { "path": "/add", "title": "Drop a Pin · Curbsport" },
-    { "path": "/profile", "title": "Profile · Curbsport" },
-    { "path": "/login", "title": "Login · Curbsport" },
-    { "path": "/register", "title": "Join the Set · Curbsport" },
-    { "path": "/pitches/:id", "title": "Pitch Detail · Curbsport" }
-  ]
-}
+{"routes":[{"path":"/","title":"Campus Ground Radar & Live Pickup Feed"},{"path":"/pitches/:id","title":"Pitch Detail & King of the Ground"},{"path":"/profile","title":"Player Profile & Locker Room"},{"path":"/add","title":"Drop a Pin — Register a Ground"}]}

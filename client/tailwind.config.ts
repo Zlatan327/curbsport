@@ -1,23 +1,24 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
         asphalt: "#111311",
-        turf: "#00FF66",
-        caution: "#FFD700",
-        chalk: "#F0F0E8",
-        smoke: "#8B908A",
+        surface: "#191c19",
+        raised: "#252925",
+        turf: "#00ff66",
+        amber: "#ffd700",
+        chalk: "#f0f0e8",
+        smoke: "#8b908a",
       },
       fontFamily: {
-        display: ["var(--font-display)", "Arial Black", "sans-serif"],
-        body: ["var(--font-body)", "Arial", "sans-serif"],
+        display: ["var(--font-display)", "Impact", "sans-serif"],
+        sans: ["var(--font-sans)", "Arial", "sans-serif"],
       },
       boxShadow: {
-        hard: "4px 4px 0 #000",
-        "hard-green": "4px 4px 0 #00FF66",
+        glow: "0 0 24px rgba(0, 255, 102, .18)",
       },
     },
   },

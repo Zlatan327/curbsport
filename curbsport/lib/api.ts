@@ -6,7 +6,8 @@ export class ApiUnavailableError extends Error {
 }
 
 export const getApiBaseUrl = (): string | null => {
-  const value = process.env.NEXT_PUBLIC_API_URL?.trim();
+  const value = process.env.NEXT_PUBLIC_API_URL?.trim() ||
+    (process.env.NODE_ENV === "production" ? "https://insidelife.onrender.com/api" : null);
   return value ? value.replace(/\/+$/, "") : null;
 };
 export const isApiConfigured = (): boolean => getApiBaseUrl() !== null;
