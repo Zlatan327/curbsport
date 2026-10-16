@@ -4,7 +4,7 @@
 </div>
 
 ## 🌟 The Vision
-Inside Life maps out the hidden and popular playing grounds across universities. It solves the biggest problem in pickup sports: **"Where are people playing right now, and do they need an extra player?"**
+Curbsport maps out the hidden and popular playing grounds across universities. It solves the biggest problem in pickup sports: **"Where are people playing right now, and do they need an extra player?"**
 
 By bridging the gap between physical courts and digital coordination, players can find matches, build their reputation, and compete for the title of "King of the Ground."
 
