@@ -35,6 +35,8 @@ export function readStoredUser(): AuthUser | null {
   }
 }
 
+import { fetchCurrentUser } from "@/lib/api";
+
 export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   user: null,
@@ -51,6 +53,20 @@ export const useAuthStore = create<AuthState>((set) => ({
         window.localStorage.setItem(CURRENT_TOKEN_KEY, legacyToken);
       }
       set({ token, user, ready: true });
+
+      if (token) {
+        fetchCurrentUser()
+          .then((freshUser) => {
+            if (freshUser) {
+              try {
+                window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(freshUser));
+                window.localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(freshUser));
+              } catch {}
+              set({ user: freshUser });
+            }
+          })
+          .catch(() => {});
+      }
     } catch {
       set({ token: null, user: null, ready: true });
     }
@@ -65,6 +81,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       // In-memory fallback
     }
     set({ token, user, ready: true });
+
+    fetchCurrentUser()
+      .then((freshUser) => {
+        if (freshUser) {
+          const merged = { ...user, ...freshUser };
+          try {
+            window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(merged));
+            window.localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(merged));
+          } catch {}
+          set({ user: merged });
+        }
+      })
+      .catch(() => {});
   },
   setToken: (token: string | null) => {
     try {

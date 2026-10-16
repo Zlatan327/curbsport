@@ -281,8 +281,38 @@ export async function registerUser(payload: {
 
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
   try {
+    const res = await apiRequest<{ user?: AuthUser }>("/users/me");
+    if (res?.user) return res.user;
+  } catch {
+    // Try fallback
+  }
+  try {
     const res = await apiRequest<{ user?: AuthUser }>("/auth/me");
     return res?.user || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateUserProfile(payload: Partial<AuthUser>): Promise<{ user: AuthUser }> {
+  return apiRequest<{ user: AuthUser }>("/users/me", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchSchools(): Promise<{ id: number; name: string }[]> {
+  try {
+    const res = await apiRequest<{ schools?: { id: number; name: string }[] }>("/pitches/schools/list");
+    return Array.isArray(res?.schools) ? res.schools : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchUserStats(userId: string | number): Promise<Record<string, unknown> | null> {
+  try {
+    return await apiRequest<Record<string, unknown>>(`/matches/stats/${encodeURIComponent(String(userId))}`);
   } catch {
     return null;
   }

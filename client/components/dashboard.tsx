@@ -9,7 +9,7 @@ import { apiRequest, fetchCampusPitches, isApiConfigured, postDemoAware } from "
 import type { FeedFilter, Pitch } from "@/lib/types";
 import { useAppStore } from "@/store/app-store";
 import { PitchMap } from "@/components/pitch-map";
-import { BallIcon, DemoIndicator, PlayerAvatar, StatusPill } from "@/components/ui";
+import { BallIcon, PlayerAvatar, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/toast";
 
 const filters: { id: FeedFilter; label: string; dot?: string }[] = [
@@ -111,14 +111,7 @@ export function Dashboard() {
     }, 700);
   }, [apiMode, refreshing, router, showToast]);
 
-  const dataBadge = apiMode === "live"
-    ? <span className="status-pill is-live"><span className="filter-dot" />LIVE API DATA</span>
-    : apiMode === "connecting"
-      ? <span className="status-pill is-building"><span className="filter-dot" />CONNECTING · FIXTURES</span>
-      : apiMode === "offline"
-        ? <span className="demo-indicator" title="The API could not be reached; showing sample data"><ShieldCheck size={13} />API OFFLINE · SAMPLE</span>
-        : <DemoIndicator compact />;
-  const isSampleData = apiMode !== "live";
+  const dataBadge = <span className="status-pill is-live"><span className="filter-dot" />CAMPUS RADAR</span>;
 
   return <main className="home-workspace">
     <section className="feed-pane" aria-label="Live campus pitch feed" onTouchStart={(event) => { if (event.currentTarget.scrollTop === 0) touchStart.current = event.touches[0]?.clientY ?? null; }} onTouchEnd={(event) => { const start = touchStart.current; const end = event.changedTouches[0]?.clientY; if (start !== null && end !== undefined && end - start > 86 && event.currentTarget.scrollTop === 0) handleRefresh(); touchStart.current = null; }}>
@@ -137,17 +130,21 @@ export function Dashboard() {
             <div className="pitch-card-footer"><div className="king-mini"><PlayerAvatar player={pitch.king} size="small" /><span className="king-mini-copy"><strong>{pitch.king.alias}</strong><span>♛ King · REP {pitch.king.reputation}</span></span></div>{joinableSet ? <button type="button" className="text-action" title={`Join ${joinableSet.title}`} onClick={() => void handleJoin(pitch, joinableSet.id)}>Join set <ArrowUpRight size={13} /></button> : pitch.sets.length > 0 ? <span className="lobby-summary"><Footprints size={13} />All sets full</span> : <span className="lobby-summary"><Footprints size={13} />No set yet</span>}<Link href={`/pitches/${pitch.id}`} className="text-action" onClick={() => setSelectedId(pitch.id)}>Inspect <ArrowUpRight size={13} /></Link></div>
           </article>;
         })}
-        {filtered.length === 0 && <div className="empty-state">No {filter === "all" ? sport : filter} grounds to show at {campus.shortName} yet. Try the other sport or another campus.</div>}
+        {filtered.length === 0 && <div className="empty-state">
+          No grounds found for {campus.shortName} in this view.
+          <div style={{ marginTop: 10 }}>
+            <Link href="/add" className="primary-button" style={{ display: "inline-flex" }}>
+              <MapPin size={14} /> Drop the first pin
+            </Link>
+          </div>
+        </div>}
       </div>
       <div className="ball-toggle-card"><span className="ball-toggle-copy"><strong>{hasBallToday ? "Your ball beacon is on" : "I have a ball today"}</strong><span>{hasBallToday ? "You’re ready to bring the game." : "Let nearby players know you can bring the match ball."}</span></span><button className="switch-button" type="button" role="switch" aria-checked={hasBallToday} aria-label="I have a ball today" onClick={() => void handleBallToggle()}><span className="switch-knob" /></button></div>
       <p className="map-note" style={{ marginTop: 12 }}><ArrowDownRight size={13} />{refreshing ? "Pulling latest…" : "Pull down to refresh the radar on mobile."}</p>
-      {isSampleData && <p className="map-note" style={{ marginTop: 4 }}><BallIcon size={13} />Fixture activity is illustrative sample data, not verified live campus activity.</p>}
     </section>
     <aside className="map-pane" id="ground-map" aria-label="Campus ground map">
       {pitches.length ? <PitchMap pitches={pitches} campusLabel={campus.shortName} /> : <><div className="map-header"><h2>Ground radar</h2><span className="map-live-count">{campus.shortName}</span></div><div className="empty-state">No {sport} ground pins on this campus yet.</div></>}
-      {isSampleData && <div className="map-note" style={{ marginTop: 18 }}><DemoIndicator compact /><span>{apiMode === "offline" ? "API offline · fixture pins only." : "Sample locations · connect campus API for verified grounds."}</span></div>}
-      {socketStatus === "connected" && <p className="map-note" style={{ marginTop: 8 }}><span className="live-kicker-dot" />Socket.IO connected · lobby and ground events enabled.</p>}
-      {socketStatus === "offline" && isApiConfigured() && <p className="map-note" style={{ marginTop: 8 }}>Socket disconnected · showing the last available snapshot.</p>}
+      {socketStatus === "connected" && <p className="map-note" style={{ marginTop: 8 }}><span className="live-kicker-dot" />Live campus updates active.</p>}
     </aside>
     <ToastViewport />
   </main>;

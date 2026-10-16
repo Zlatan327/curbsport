@@ -22,6 +22,7 @@ export interface Player {
   reputation: number;
   tier: "Rookie" | "Baller" | "Campus Legend";
   avatarColor: string;
+  avatarUrl?: string | null;
   heightCm?: number;
   weightKg?: number;
 }
@@ -45,7 +46,17 @@ export interface AuthUser {
   schoolId?: number;
   primarySport?: string;
   favoritePosition?: string;
+  footballPosition?: string;
+  basketballPosition?: string;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  medicalInfo?: string | null;
   hasBall?: boolean;
+  ballType?: string | null;
+  matchesPlayed?: number;
+  goalsScored?: number;
+  manOfTheMatch?: number;
+  school?: { name: string; institutionType?: string };
 }
 
 export interface PitchDirection {

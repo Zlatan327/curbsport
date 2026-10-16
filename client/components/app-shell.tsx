@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -87,9 +88,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {token && user ? (
               <div className="flex items-center gap-2">
                 <Link href="/profile" className="profile-chip" aria-label={`Player profile for ${user.alias}`}>
-                  <span className="avatar is-small" style={{ background: "linear-gradient(145deg,#1b4a31,#111311)" }}>
-                    {user.alias.slice(0, 2).toUpperCase()}
-                  </span>
+                  {user.avatarUrl ? (
+                    <span className="avatar is-small" style={{ overflow: "hidden", padding: 0 }}>
+                      <img src={user.avatarUrl} alt={user.alias} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </span>
+                  ) : (
+                    <span className="avatar is-small" style={{ background: "linear-gradient(145deg,#1b4a31,#111311)" }}>
+                      {user.alias.slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
                   <span className="profile-chip-copy">
                     <strong>{user.alias}</strong>
                     <span><ShieldCheck size={11} style={{ display: "inline", verticalAlign: "-1px" }} /> REP {user.reputationScore ?? 10}</span>
@@ -130,13 +137,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <CampusSelect />
           <div className="flex items-center gap-2">
             {token && user ? (
-              <button
-                type="button"
-                onClick={() => logout()}
-                className="text-xs text-red-400 font-semibold uppercase tracking-wider px-2 py-1 rounded border border-red-500/30"
-              >
-                Log Out ({user.alias})
-              </button>
+              <div className="flex items-center gap-2">
+                <Link href="/profile" className="inline-flex items-center gap-1.5 text-xs text-[#F0F0E8] px-2 py-1 rounded bg-[#191C19] border border-[#F0F0E8]/15">
+                  {user.avatarUrl ? (
+                    <span className="avatar is-small" style={{ width: "20px", height: "20px", overflow: "hidden", padding: 0 }}>
+                      <img src={user.avatarUrl} alt={user.alias} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </span>
+                  ) : (
+                    <span className="avatar is-small" style={{ width: "20px", height: "20px", fontSize: "10px" }}>
+                      {user.alias.slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="font-semibold">{user.alias}</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => logout()}
+                  className="text-xs text-red-400 font-semibold uppercase tracking-wider px-2 py-1 rounded border border-red-500/30"
+                >
+                  Log Out
+                </button>
+              </div>
             ) : (
               <button
                 type="button"

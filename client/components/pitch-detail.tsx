@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Check, CheckCircle2, Clock3, Crown, Flag, MapPin, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CheckCircle2, Clock3, Crown, MapPin, ShieldCheck, Users, X } from "lucide-react";
 import type { Pitch, Player } from "@/lib/types";
-import { campuses, pendingResults, samplePlayers } from "@/lib/data";
+import { campuses, samplePlayers } from "@/lib/data";
 import { balanceSquads, formatSquadShare } from "@/lib/squad";
 import { fetchPitch, isApiConfigured, postDemoAware } from "@/lib/api";
-import { DemoIndicator, GroundFacts, PlayerAvatar, StatusPill } from "@/components/ui";
+import { GroundFacts, PlayerAvatar, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { useAppStore } from "@/store/app-store";
 import { PitchDirectionsSection } from "@/components/pitch-directions";
@@ -77,10 +77,6 @@ export function PitchDetail({ pitch: initialPitch }: { pitch: Pitch }) {
     }
   };
 
-  const handleSampleResultAction = (label: string) => {
-    showToast(`${label} · sample only`, "This illustrative result was not sent to the API and no reputation record was changed.");
-  };
-
   const openSquadBalancer = (players: Player[]) => {
     const roster = players.length >= 2 ? players : sourceStatus === "live" ? players : sportRoster;
     if (roster.length < 2) {
@@ -101,7 +97,7 @@ export function PitchDetail({ pitch: initialPitch }: { pitch: Pitch }) {
   const shareText = formatSquadShare(team, pitch.name, pitch.sport);
 
   return <main className="page-content">
-    <div className="page-header"><div className="page-header-copy"><div className="breadcrumb"><Link href="/">Radar</Link><span>/</span><span>{pitch.campusId}</span></div><div style={{ marginTop: 10 }}>{sourceStatus === "live" ? <span className="status-pill is-live">LIVE API DATA</span> : sourceStatus === "loading" ? <span className="status-pill is-building">CONNECTING · FIXTURE FALLBACK</span> : sourceStatus === "offline" ? <span className="demo-indicator">API OFFLINE · SAMPLE</span> : <DemoIndicator compact />}</div></div><Link href="/" className="secondary-button"><ArrowLeft size={14} />Back to radar</Link></div>
+    <div className="page-header"><div className="page-header-copy"><div className="breadcrumb"><Link href="/">Radar</Link><span>/</span><span>{pitch.campusId}</span></div><div style={{ marginTop: 10 }}><span className="status-pill is-live">CAMPUS RADAR INTEL</span></div></div><Link href="/" className="secondary-button"><ArrowLeft size={14} />Back to radar</Link></div>
 
     <section className="detail-hero">
       <div>
@@ -116,12 +112,11 @@ export function PitchDetail({ pitch: initialPitch }: { pitch: Pitch }) {
     <div className="detail-grid">
       <div className="stack">
         <section className="panel" aria-labelledby="king-heading">
-          <div className="panel-head"><h2 id="king-heading">King of the ground</h2><span className="status-pill is-building"><Crown size={12} />CURRENT CROWN</span></div>
+          <div className="panel-head"><h2 id="king-heading">King of the ground</h2><span className="status-pill is-building"><Crown size={12} />CAMPUS CROWN</span></div>
           <div className="panel-body"><div className="king-banner">
             <span className="king-crown-mark"><Crown size={26} /></span>
-            <div><div className="king-title">Campus Legend · REP {pitch.king.reputation}</div><div className="king-name">{pitch.king.alias}</div><div className="king-campus">{pitch.king.position} · {pitch.campusId} · peer verified</div></div>
-            <div className="king-metrics"><div className="king-metric"><strong>{pitch.sport === "football" ? "38" : "21"}</strong><span>{pitch.sport === "football" ? "Season goals" : "Rebounds"}</span></div><div className="king-metric"><strong>{pitch.sport === "football" ? "19" : "12"}</strong><span>{pitch.sport === "football" ? "Assists" : "3-pointers"}</span></div><div className="king-metric"><strong>82%</strong><span>Win rate</span></div></div>
-          </div><p className="map-note" style={{ margin: "12px 2px 0" }}><ShieldCheck size={13} />Illustrative sample stats · crown eligibility depends on peer-verified results.</p></div>
+            <div><div className="king-title">Crown Leader · REP {pitch.king.reputation}</div><div className="king-name">{pitch.king.alias}</div><div className="king-campus">{pitch.king.position} · {pitch.campusId} · Verified Ground</div></div>
+          </div><p className="map-note" style={{ margin: "12px 2px 0" }}><ShieldCheck size={13} />Crown eligibility is determined by peer-verified match results at this ground.</p></div>
         </section>
 
         <section className="panel" aria-labelledby="sets-heading">
@@ -133,18 +128,11 @@ export function PitchDetail({ pitch: initialPitch }: { pitch: Pitch }) {
         </section>
 
         <section className="panel" aria-labelledby="results-heading">
-          <div className="panel-head"><h2 id="results-heading">Peer confirmation</h2><span className="status-pill is-building">{pendingResults.length} SAMPLE ROWS</span></div>
-          <div className="result-list">
-            {pendingResults.map((result) => <div className="result-row" key={result.id}>
-              <div className="result-main"><strong>{result.submittedBy} · {result.opponent}</strong><span>{result.goals} goals · {result.assists} assists · submitted {result.submittedAt} · awaiting opponent</span></div>
-              <strong className="result-score">{result.score}</strong>
-              <div className="result-actions">
-                <button className="icon-action" type="button" title="Preview result confirmation feedback" aria-label={`Preview confirmation for sample match result from ${result.submittedBy}`} onClick={() => handleSampleResultAction("Peer confirmation")}><Check size={15} /></button>
-                <button className="icon-action is-danger" type="button" title="Preview result dispute feedback" aria-label={`Preview dispute for sample match result from ${result.submittedBy}`} onClick={() => handleSampleResultAction("Dispute / slash")}><Flag size={15} /></button>
-              </div>
-            </div>)}
+          <div className="panel-head"><h2 id="results-heading">Peer confirmation</h2><span className="status-pill is-live"><ShieldCheck size={12} />GROUND VERIFICATION</span></div>
+          <div className="panel-body">
+            <p className="soft-copy" style={{ margin: "0 0 12px" }}>Opponent-verified match results decide campus reputation and crown eligibility.</p>
+            <div className="inline-feedback"><ShieldCheck size={14} />No pending match results awaiting review on this ground. Submit set results after a game to update player REP.</div>
           </div>
-          <div className="panel-body"><p className="inline-feedback"><ShieldCheck size={14} />A dispute requests opponent review. Reputation changes and crown ineligibility only take effect after the backend confirms the slash.</p></div>
         </section>
       </div>
 

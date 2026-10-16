@@ -1,14 +1,54 @@
+/* eslint-disable @next/next/no-img-element */
 import type { ReactNode } from "react";
 import { Check, CircleDashed, Crown, MapPin, Users } from "lucide-react";
-import type { PitchStatus, Player } from "@/lib/types";
+import type { PitchStatus } from "@/lib/types";
 
 export function BallIcon({ size = 14 }: { size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" /><path d="m9.8 8.1 4.4 0 1.4 4.3-3.6 2.7-3.6-2.7 1.4-4.3ZM9.8 8.1 7 5.9m7.2 2.2 2.8-2.2M8.4 12.4l-5.1.3m8.7 2.4-.2 5.8m3.8-8.5 5.1.3m-5.1-4.6 1.7 2.2m-6.5-2.2-1.7 2.2" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-export function PlayerAvatar({ player, size = "regular" }: { player: Player; size?: "small" | "regular" | "large" }) {
-  const initials = player.alias.split(/[ .-]/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-  return <span className={`avatar ${size === "small" ? "is-small" : size === "large" ? "is-large" : ""}`} style={{ background: `linear-gradient(140deg, ${player.avatarColor}, #101310 88%)` }} aria-label={player.alias} title={player.alias}>{initials}</span>;
+export function PlayerAvatar({
+  player,
+  size = "regular",
+}: {
+  player: { alias: string; avatarUrl?: string | null; avatarColor?: string };
+  size?: "small" | "regular" | "large";
+}) {
+  const sizeClass = size === "small" ? "is-small" : size === "large" ? "is-large" : "";
+  if (player.avatarUrl) {
+    return (
+      <span
+        className={`avatar ${sizeClass}`}
+        style={{ overflow: "hidden", padding: 0 }}
+        aria-label={player.alias}
+        title={player.alias}
+      >
+        <img
+          src={player.avatarUrl}
+          alt={player.alias}
+          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
+        />
+      </span>
+    );
+  }
+  const color = player.avatarColor || "#264453";
+  const initials = player.alias
+    .split(/[ .-]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+  return (
+    <span
+      className={`avatar ${sizeClass}`}
+      style={{ background: `linear-gradient(140deg, ${color}, #101310 88%)` }}
+      aria-label={player.alias}
+      title={player.alias}
+    >
+      {initials}
+    </span>
+  );
 }
 
 export function StatusPill({ status, label }: { status: PitchStatus; label?: string }) {
@@ -16,8 +56,8 @@ export function StatusPill({ status, label }: { status: PitchStatus; label?: str
   return <span className={`status-pill is-${status}`}><span className="filter-dot" />{text}</span>;
 }
 
-export function DemoIndicator({ compact = false }: { compact?: boolean }) {
-  return <span className="demo-indicator" title="Illustrative sample activity, not verified live campus data"><CircleDashed size={13} aria-hidden="true" />{compact ? "DEMO DATA" : "DEMO DATA · SAMPLE ACTIVITY"}</span>;
+export function DemoIndicator() {
+  return null;
 }
 
 export function GroundFacts({ pitch }: { pitch: { surface: string; floodlights: boolean; liveCount: number; ballPresent: boolean } }) {
