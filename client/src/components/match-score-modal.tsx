@@ -164,6 +164,27 @@ export function MatchScoreModal({
           </button>
         </div>
 
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 14px',
+            margin: '12px 16px 0',
+            background: 'rgba(34, 197, 94, 0.08)',
+            border: '1px solid rgba(34, 197, 94, 0.25)',
+            borderRadius: '8px',
+            fontSize: '11px',
+            color: '#d1fae5',
+            lineHeight: 1.4,
+          }}
+        >
+          <span style={{ fontSize: '15px' }}>⚡</span>
+          <span>
+            <strong>Stress-free stats:</strong> Don&apos;t stress counting every play! Tap scorers, toggle <strong>🛡️ CS</strong> for defense, or select <strong>MVP ⭐</strong>. Every baller in the set earns <strong>+15 REP</strong> just for playing!
+          </span>
+        </div>
+
         {error && <div className="match-modal-error">{error}</div>}
 
         <form onSubmit={handleSubmit} className="match-modal-body">
@@ -259,16 +280,26 @@ export function MatchScoreModal({
                             <Plus size={11} />
                           </button>
                         </div>
+
+                        <button
+                          type="button"
+                          className={`cs-toggle-btn ${pStat.cleanSheets > 0 ? 'is-active' : ''}`}
+                          onClick={() => updateStat(player.id, 'cleanSheets', pStat.cleanSheets > 0 ? -1 : 1)}
+                          title="Clean Sheet (Defenders & Goalkeepers)"
+                        >
+                          🛡️ {pStat.cleanSheets > 0 ? 'CS ✓' : 'CS'}
+                        </button>
                       </>
                     ) : (
                       <>
-                        <div className="stat-stepper">
-                          <span className="stat-label">POINTS</span>
+                        <div className="stat-stepper stat-stepper--points">
+                          <span className="stat-label">PTS</span>
                           <button
                             type="button"
                             className="stepper-btn"
                             disabled={pStat.points <= 0}
-                            onClick={() => updateStat(player.id, 'points', -2)}
+                            onClick={() => updateStat(player.id, 'points', -1)}
+                            title="Undo point"
                           >
                             <Minus size={11} />
                           </button>
@@ -276,14 +307,31 @@ export function MatchScoreModal({
                           <button
                             type="button"
                             className="stepper-btn"
-                            onClick={() => updateStat(player.id, 'points', 2)}
+                            onClick={() => updateStat(player.id, 'points', 1)}
+                            title="Free throw (+1 pt)"
                           >
-                            <Plus size={11} />
+                            +1
+                          </button>
+                          <button
+                            type="button"
+                            className="stepper-btn stepper-btn--accent"
+                            onClick={() => updateStat(player.id, 'points', 2)}
+                            title="Field goal (+2 pts)"
+                          >
+                            +2
+                          </button>
+                          <button
+                            type="button"
+                            className="stepper-btn stepper-btn--accent"
+                            onClick={() => updateStat(player.id, 'points', 3)}
+                            title="Three pointer (+3 pts)"
+                          >
+                            +3
                           </button>
                         </div>
 
                         <div className="stat-stepper">
-                          <span className="stat-label">REBOUNDS</span>
+                          <span className="stat-label">REB</span>
                           <button
                             type="button"
                             className="stepper-btn"

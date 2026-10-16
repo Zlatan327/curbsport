@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useRef, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Camera, Check, Clock3, Crown, LoaderCircle, MapPin, MessageCircle, Navigation, Plus, Send, Share2, ShieldCheck, Swords, Trophy, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Camera, Check, Clock3, Crown, HelpCircle, LoaderCircle, MapPin, MessageCircle, Navigation, Plus, Send, Share2, ShieldCheck, Swords, Trophy, Users, X } from "lucide-react";
 import { AppFrame } from "@/components/app-frame";
 import { AsyncButton } from "@/components/async-button";
 import { MapPlaceholder } from "@/components/map-placeholder";
@@ -15,6 +15,7 @@ import { MatchScoreModal } from "@/components/match-score-modal";
 import { MatchResultCard } from "@/components/match-result-card";
 import { GroundConditionPills } from "@/components/ground-condition-pills";
 import { PitchDirectionsSection } from "@/components/pitch-directions";
+import { HowToUseModal } from "@/components/how-to-use-modal";
 import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
 import { checkinBall, createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, votePitch } from "@/lib/api";
@@ -60,6 +61,7 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
   const [banterBusy, setBanterBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showHowToUse, setShowHowToUse] = useState(false);
   const [lobbyTitle, setLobbyTitle] = useState("Evening set");
   const [lobbyTime, setLobbyTime] = useState("");
   const [lobbyPlayers, setLobbyPlayers] = useState("10");
@@ -513,7 +515,25 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
     </section>}
 
     {tab === "sets" && <section className="tab-panel sets-panel" role="tabpanel">
-      <div className="section-heading"><div><p className="eyebrow">{isBasketball ? "WHO DEY RUN SET?" : "WHO DEY HOLD SET?"}</p><h2>{isBasketball ? "GET IN RUN." : "GET IN PLAY."}</h2></div><button type="button" className="icon-action" onClick={() => setShowCreate((value) => !value)} aria-expanded={showCreate}>{showCreate ? <X size={18} /> : <Plus size={18} />} <span>{showCreate ? "CLOSE" : isBasketball ? "POST A RUN" : "CREATE SET"}</span></button></div>
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">{isBasketball ? "WHO DEY RUN SET?" : "WHO DEY HOLD SET?"}</p>
+          <h2>{isBasketball ? "GET IN RUN." : "GET IN PLAY."}</h2>
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <button
+            type="button"
+            className="text-link"
+            onClick={() => setShowHowToUse(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--turf-bright)", cursor: "pointer", background: "none", border: "none" }}
+          >
+            <HelpCircle size={13} /> How it works
+          </button>
+          <button type="button" className="icon-action" onClick={() => setShowCreate((value) => !value)} aria-expanded={showCreate}>
+            {showCreate ? <X size={18} /> : <Plus size={18} />} <span>{showCreate ? "CLOSE" : isBasketball ? "POST A RUN" : "CREATE SET"}</span>
+          </button>
+        </div>
+      </div>
       {lobbyError && <Notice tone="warning" className="inline-notice"><strong>SET PREVIEW</strong> Unable to load live lobbies. Sample sets are clearly labelled below.</Notice>}
       {showCreate && <form className="lobby-create" onSubmit={handleCreateLobby}><div className="form-section-heading"><span>+</span><div><p className="eyebrow">{isBasketball ? "CALL YOUR BALLERS" : "CALL YOUR PEOPLE"}</p><h2>{isBasketball ? "POST A RUN" : "POST A SET"}</h2></div></div><label className="field"><span>{isBasketball ? "RUN NAME" : "SET NAME"}</span><input value={lobbyTitle} onChange={(event) => setLobbyTitle(event.target.value)} required maxLength={60} placeholder={isBasketball ? "Evening 3v3 / 5v5 run" : "Evening 5-a-side"} /></label><label className="field"><span>KICK-OFF</span><input type="datetime-local" value={lobbyTime} onChange={(event) => setLobbyTime(event.target.value)} required /></label><label className="field"><span>PLAYER CAP</span><input type="number" value={lobbyPlayers} onChange={(event) => setLobbyPlayers(event.target.value)} min={2} max={30} required /></label><label className="field"><span>NOTE <small>OPTIONAL</small></span><input value={lobbyNote} onChange={(event) => setLobbyNote(event.target.value)} placeholder={isBasketball ? "Guards needed. Bring light/dark jersey." : "Keeper needed. Bring a dark jersey."} maxLength={100} /></label><AsyncButton type="submit" busy={lobbyBusy === "create"} className="button--full">{isBasketball ? "POST THE RUN" : "POST THE SET"} <ArrowUpRight size={16} /></AsyncButton></form>}
       {lobbyLoading && !lobbyData && <LoadingState label={isBasketball ? "Calling the run list…" : "Calling the set list…"} />}
@@ -873,6 +893,8 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
         </div>
       </div>
     )}
+
+    <HowToUseModal isOpen={showHowToUse} onClose={() => setShowHowToUse(false)} />
   </AppFrame>
 );
 }
