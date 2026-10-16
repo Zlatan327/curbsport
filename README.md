@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>Inside Life ⚽🏀 (Sports Edition)</h1>
+  <h1>curbsport ⚽🏀 (Sports Edition)</h1>
   <p><strong>A hyper-local sports ground map, real-time matchmaking lobby, and reputation tracking app for university campuses across Nigeria.</strong></p>
 </div>
 
