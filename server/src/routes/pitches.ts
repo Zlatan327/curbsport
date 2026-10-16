@@ -80,7 +80,11 @@ pitchRouter.get('/', async (req: Request, res: Response) => {
 // GET /api/pitches/:id
 pitchRouter.get('/:id', async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id as string, 10);
+    if (!id || isNaN(id)) {
+      res.status(400).json({ error: 'Valid pitch id is required' });
+      return;
+    }
     const pitch = await prisma.pitch.findUnique({
       where: { id },
       include: {
@@ -428,4 +432,203 @@ pitchRouter.post('/:id/ball-checkin', authMiddleware, validate(ballCheckinSchema
   }
 });
 
+// Helper to verify if user has actually been to the pitch (anti-fraud requirement)
+async function userHasAttendedPitch(userId: number, pitchId: number, pitchCreatorId: number | null, pitchBallBroughtBy: string | null, userAlias: string): Promise<boolean> {
+  if (pitchCreatorId === userId || pitchBallBroughtBy === userAlias) return true;
+  const [hasLobby, hasMatch, hasBallHistory] = await Promise.all([
+    prisma.lobbyMember.findFirst({ where: { userId, lobby: { pitchId } } }),
+    prisma.matchStat.findFirst({ where: { userId, matchResult: { pitchId } } }),
+    prisma.pitch.findFirst({ where: { id: pitchId, ballBroughtBy: userAlias } }),
+  ]);
+  if (hasLobby || hasMatch || hasBallHistory) return true;
 
+  // For campus grounds with no match history yet, allow verified students from the same university who upvoted
+  const [user, pitch] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { schoolId: true } }),
+    prisma.pitch.findUnique({ where: { id: pitchId }, select: { schoolId: true } }),
+  ]);
+  if (user && pitch && user.schoolId === pitch.schoolId) {
+    const hasUpvote = await prisma.pitchVote.findFirst({ where: { userId, pitchId, isUp: true } });
+    if (hasUpvote) return true;
+  }
+  return false;
+}
+
+const submitDirectionsSchema = z.object({
+  directions: z.string().min(10, 'Directions must be at least 10 characters long').max(2000).trim(),
+  landmarks: z.string().max(500).trim().optional(),
+  transitTip: z.string().max(300).trim().optional(),
+});
+
+// GET /api/pitches/:id/directions
+pitchRouter.get('/:id/directions', async (req: Request, res: Response) => {
+  try {
+    const pitchId = parseInt(req.params.id as string, 10);
+    if (!pitchId || isNaN(pitchId)) {
+      res.status(400).json({ error: 'Valid pitch id is required' });
+      return;
+    }
+
+    const directions = await prisma.pitchDirection.findMany({
+      where: { pitchId },
+      orderBy: [{ isVerified: 'desc' }, { verificationCount: 'desc' }, { createdAt: 'desc' }],
+      include: {
+        user: { select: { id: true, alias: true, avatarUrl: true, reputationScore: true } },
+        verifications: { select: { userId: true, createdAt: true } },
+      },
+    });
+
+    res.json({ directions });
+  } catch (err) {
+    console.error('Fetch directions error:', err);
+    res.status(500).json({ error: 'Failed to fetch pitch directions' });
+  }
+});
+
+// POST /api/pitches/:id/directions (Upload directions - restricted to players who have attended)
+pitchRouter.post('/:id/directions', authMiddleware, validate(submitDirectionsSchema), async (req: AuthRequest, res: Response) => {
+  try {
+    const pitchId = parseInt(req.params.id as string, 10);
+    const userId = req.user!.userId;
+    const { directions, landmarks, transitTip } = req.body;
+
+    const pitch = await prisma.pitch.findUnique({ where: { id: pitchId } });
+    if (!pitch) {
+      res.status(404).json({ error: 'Pitch not found' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const attended = await userHasAttendedPitch(userId, pitchId, pitch.createdById, pitch.ballBroughtBy, user.alias);
+    if (!attended) {
+      res.status(403).json({
+        error: 'Only players who have played sets, confirmed matches, or voted at this ground can upload verified directions.',
+      });
+      return;
+    }
+
+    // Create community direction
+    const newDirection = await prisma.pitchDirection.create({
+      data: {
+        pitchId,
+        userId,
+        directions,
+        landmarks: landmarks || null,
+        transitTip: transitTip || null,
+        verificationCount: 1, // Author's implicit confirmation
+        isVerified: false,
+        verifications: {
+          create: { userId },
+        },
+      },
+      include: {
+        user: { select: { id: true, alias: true, avatarUrl: true, reputationScore: true } },
+      },
+    });
+
+    getIO().to(`pitch:${pitchId}`).emit('pitch:directions_updated', { pitchId, direction: newDirection });
+
+    res.status(201).json({
+      direction: newDirection,
+      message: 'Ground directions submitted! Other players who have been here can now verify them.',
+    });
+  } catch (err) {
+    console.error('Submit directions error:', err);
+    res.status(500).json({ error: 'Failed to submit ground directions' });
+  }
+});
+
+// POST /api/pitches/:id/directions/:directionId/verify (Peer confirmation of directions)
+pitchRouter.post('/:id/directions/:directionId/verify', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const pitchId = parseInt(req.params.id as string, 10);
+    const directionId = parseInt(req.params.directionId as string, 10);
+    const userId = req.user!.userId;
+
+    const pitch = await prisma.pitch.findUnique({ where: { id: pitchId } });
+    if (!pitch) {
+      res.status(404).json({ error: 'Pitch not found' });
+      return;
+    }
+
+    const direction = await prisma.pitchDirection.findUnique({
+      where: { id: directionId },
+      include: { verifications: true },
+    });
+    if (!direction || direction.pitchId !== pitchId) {
+      res.status(404).json({ error: 'Directions not found for this pitch' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const attended = await userHasAttendedPitch(userId, pitchId, pitch.createdById, pitch.ballBroughtBy, user.alias);
+    if (!attended) {
+      res.status(403).json({
+        error: 'Only players who have played or attended this ground can verify directions.',
+      });
+      return;
+    }
+
+    const alreadyVerified = direction.verifications.some((v) => v.userId === userId);
+    if (alreadyVerified) {
+      res.status(400).json({ error: 'You have already verified these directions' });
+      return;
+    }
+
+    await prisma.pitchDirectionVerification.create({
+      data: { directionId, userId },
+    });
+
+    const newCount = direction.verificationCount + 1;
+    const isNowVerified = newCount >= 2;
+
+    const updated = await prisma.pitchDirection.update({
+      where: { id: directionId },
+      data: {
+        verificationCount: newCount,
+        isVerified: isNowVerified,
+      },
+      include: {
+        user: { select: { id: true, alias: true, avatarUrl: true, reputationScore: true } },
+      },
+    });
+
+    // If community verified (2+ peers who have attended), update pitch landmark description
+    if (isNowVerified) {
+      await prisma.pitch.update({
+        where: { id: pitchId },
+        data: { landmarkDescription: direction.directions },
+      });
+    }
+
+    getIO().to(`pitch:${pitchId}`).emit('pitch:directions_verified', {
+      pitchId,
+      directionId,
+      verificationCount: newCount,
+      isVerified: isNowVerified,
+    });
+
+    res.json({
+      success: true,
+      direction: updated,
+      message: isNowVerified
+        ? 'Directions verified by community quorum! These are now the official ground directions.'
+        : `Verification recorded (${newCount}/2 needed for official status).`,
+    });
+  } catch (err) {
+    console.error('Verify directions error:', err);
+    res.status(500).json({ error: 'Failed to verify directions' });
+  }
+});
+
+export default pitchRouter;

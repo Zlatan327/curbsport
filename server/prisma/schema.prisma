@@ -54,6 +54,8 @@ model User {
   slashesIssued      SlashRecord[]      @relation("SlashIssuer")
   crownBannedUntil   DateTime?          @map("crown_banned_until")
   matchResults       MatchResult[]      @relation("MatchResultSubmitter")
+  directionsUploaded PitchDirection[]
+  directionVerifications PitchDirectionVerification[]
 }
 
 model PhysicalStatHistory {
@@ -105,6 +107,7 @@ model Pitch {
   favoritedBy     FavoritePitch[]
   sportType       SportType @default(FOOTBALL) @map("sport_type")
   matchResults    MatchResult[]
+  directions      PitchDirection[]
 }
 
 enum VerificationStatus {
@@ -281,4 +284,34 @@ model SlashRecord {
   createdAt       DateTime    @default(now()) @map("created_at")
 
   @@index([slashedUserId])
+}
+
+model PitchDirection {
+  id                Int       @id @default(autoincrement())
+  pitchId           Int       @map("pitch_id")
+  pitch             Pitch     @relation(fields: [pitchId], references: [id], onDelete: Cascade)
+  userId            Int       @map("user_id")
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  directions        String    @db.Text
+  landmarks         String?   @db.Text
+  transitTip        String?   @map("transit_tip")
+  verificationCount Int       @default(0) @map("verification_count")
+  isVerified        Boolean   @default(false) @map("is_verified")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  verifications     PitchDirectionVerification[]
+
+  @@index([pitchId])
+}
+
+model PitchDirectionVerification {
+  id          Int            @id @default(autoincrement())
+  directionId Int            @map("direction_id")
+  direction   PitchDirection @relation(fields: [directionId], references: [id], onDelete: Cascade)
+  userId      Int            @map("user_id")
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  @@unique([directionId, userId])
 }

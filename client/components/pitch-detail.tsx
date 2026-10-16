@@ -10,6 +10,7 @@ import { fetchPitch, isApiConfigured, postDemoAware } from "@/lib/api";
 import { DemoIndicator, GroundFacts, PlayerAvatar, StatusPill } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { useAppStore } from "@/store/app-store";
+import { PitchDirectionsSection } from "@/components/pitch-directions";
 
 function openShare(target: "whatsapp" | "telegram", text: string) {
   const encoded = encodeURIComponent(text);
@@ -148,6 +149,7 @@ export function PitchDetail({ pitch: initialPitch }: { pitch: Pitch }) {
       </div>
 
       <aside className="stack">
+        <PitchDirectionsSection pitch={pitch} />
         <section className="panel"><div className="panel-head"><h2>Ground conditions</h2><StatusPill status={pitch.status} /></div><div className="panel-body"><GroundFacts pitch={pitch} /><div className="divider" /><p className="soft-copy">{pitch.condition}. Community checks last refreshed {pitch.updatedMinutesAgo} minutes ago. Confirm surface and security access when you arrive.</p><Link href="/add" className="text-action">Update this ground <ArrowUpRight size={13} /></Link></div></section>
         <section className="panel"><div className="panel-head"><h2>Pitch quick signals</h2><span className="eyebrow"><span className="live-kicker-dot" />{pitch.liveCount} nearby</span></div><div className="panel-body"><div className="beacon-row" style={{ paddingTop: 0, border: 0 }}><span className="beacon-copy"><span className="live-kicker-dot" />Ball dey ground</span><strong>{pitch.ballPresent ? pitch.ballBroughtBy : "Not confirmed"}</strong></div><div className="divider" /><div className="selected-ground-facts"><span className="fact-chip"><CheckCircle2 size={12} />{pitch.verified ? "Verified ground" : "Community pin"}</span><span className="fact-chip">{pitch.surface}</span></div><p className="map-note" style={{ marginBottom: 0 }}><MapPin size={13} />Sample peer results and crown stats are illustrative; confirm access and conditions on arrival.</p></div></section>
       </aside>

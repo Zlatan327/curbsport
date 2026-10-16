@@ -2,12 +2,10 @@ import Link from "next/link";
 
 export function BrandMark({ className = "" }: { className?: string }) {
   return (
-    <svg className={`brand-mark ${className}`} viewBox="0 0 96 96" role="img" aria-label="Curbsport mark">
-      <rect width="96" height="96" rx="24" fill="#111311" />
-      <path d="M28 67V29h38M28 48h27" fill="none" stroke="#00ff66" strokeWidth="7" strokeLinecap="square" />
-      <circle cx="59" cy="49" r="13" fill="none" stroke="#00ff66" strokeWidth="2" opacity=".75" />
-      <circle cx="59" cy="49" r="3.5" fill="#00ff66" />
-      <path d="M59 33v7M59 58v7M43 49h7M68 49h7" stroke="#00ff66" strokeWidth="2" opacity=".6" />
+    <svg className={`brand-mark ${className}`} viewBox="0 0 64 64" role="img" aria-label="Curbsport mark">
+      <rect width="64" height="64" rx="14" fill="#111311" />
+      <path d="M10 17h44v7H10zm0 12h30v7H10zm0 12h44v7H10z" fill="#00ff66" />
+      <path d="m42 29 12 7-12 7z" fill="#ffd700" />
     </svg>
   );
 }

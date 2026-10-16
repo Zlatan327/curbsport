@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Map, Plus, Search, ShieldCheck, UserRound } from "lucide-react";
+import { Activity, LogIn, LogOut, Map, Plus, Search, ShieldCheck, UserRound } from "lucide-react";
 import { campuses, demoPitches } from "@/lib/data";
 import { useAppStore } from "@/store/app-store";
 import { useAuthStore } from "@/store/auth-store";
 import { BrandLockup } from "@/components/brand";
 import { CommandPalette } from "@/components/command-palette";
 import { RealtimeBridge } from "@/components/realtime-bridge";
+import { AuthModal } from "@/components/auth-modal";
 
 function SportToggle() {
   const sport = useAppStore((state) => state.sport);
@@ -52,7 +53,12 @@ function MobileNavigation() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const initializeAuth = useAuthStore((state) => state.initialize);
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   const campusId = useAppStore((state) => state.campusId);
   const visibleSets = demoPitches.filter((pitch) => pitch.campusId === campusId).reduce((count, pitch) => count + pitch.sets.length, 0);
   const openSearch = useCallback(() => setSearchOpen(true), []);
@@ -76,16 +82,78 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="topbar-actions">
             <button type="button" className="icon-button" onClick={openSearch} aria-label="Search grounds, players, and campuses"><Search size={17} /><span className="sr-only">Search</span></button>
             <Link href="/add" className="drop-pin-button"><Plus size={16} aria-hidden="true" />Drop a Pin</Link>
-            <div className="set-counter" title={`${visibleSets} illustrative sample sets on this campus`}><Activity size={14} aria-hidden="true" /><strong>{visibleSets}</strong> SAMPLE SETS</div>
-            <Link href="/profile" className="profile-chip" aria-label="Sample player profile, reputation 94"><span className="avatar is-small" style={{ background: "linear-gradient(145deg,#1b4a31,#111311)" }}>TR</span><span className="profile-chip-copy"><strong>Tobi R.</strong><span><ShieldCheck size={11} style={{ display: "inline", verticalAlign: "-1px" }} /> SAMPLE · REP 94</span></span></Link>
+            <div className="set-counter" title={`${visibleSets} active sets on this campus`}><Activity size={14} aria-hidden="true" /><strong>{visibleSets}</strong> SETS</div>
+            
+            {token && user ? (
+              <div className="flex items-center gap-2">
+                <Link href="/profile" className="profile-chip" aria-label={`Player profile for ${user.alias}`}>
+                  <span className="avatar is-small" style={{ background: "linear-gradient(145deg,#1b4a31,#111311)" }}>
+                    {user.alias.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className="profile-chip-copy">
+                    <strong>{user.alias}</strong>
+                    <span><ShieldCheck size={11} style={{ display: "inline", verticalAlign: "-1px" }} /> REP {user.reputationScore ?? 10}</span>
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => logout()}
+                  className="icon-button text-red-400 hover:text-red-300 hover:border-red-500/40"
+                  title="Log out"
+                  aria-label="Log out"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode("login"); setAuthModalOpen(true); }}
+                  className="inline-flex items-center gap-1.5 min-h-[40px] px-3.5 border border-[#F0F0E8]/20 hover:border-[#00FF66] bg-[#191C19] text-xs font-bold uppercase tracking-wider text-[#F0F0E8] rounded-md transition-colors"
+                >
+                  <LogIn size={14} />
+                  <span>Log In</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode("register"); setAuthModalOpen(true); }}
+                  className="inline-flex items-center justify-center min-h-[40px] px-3.5 bg-[#00FF66] hover:bg-[#00FF66]/90 text-black text-xs font-bold uppercase tracking-wider rounded-md transition-colors"
+                >
+                  Join
+                </button>
+              </div>
+            )}
           </div>
         </div>
-        <div className="mobile-header-row"><CampusSelect /><div className="set-counter" title="Illustrative sample set count"><Activity size={13} aria-hidden="true" /><strong>{visibleSets}</strong> SAMPLE SETS</div></div>
+        <div className="mobile-header-row flex items-center justify-between px-4 py-2 border-t border-[#F0F0E8]/10 bg-[#111311]">
+          <CampusSelect />
+          <div className="flex items-center gap-2">
+            {token && user ? (
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="text-xs text-red-400 font-semibold uppercase tracking-wider px-2 py-1 rounded border border-red-500/30"
+              >
+                Log Out ({user.alias})
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setAuthMode("login"); setAuthModalOpen(true); }}
+                className="text-xs text-[#00FF66] font-semibold uppercase tracking-wider px-2 py-1 rounded border border-[#00FF66]/40"
+              >
+                Log In
+              </button>
+            )}
+          </div>
+        </div>
         <div className="mobile-sport-row"><SportToggle /></div>
       </header>
       <div className="page-shell">{children}</div>
       <MobileNavigation />
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <AuthModal open={authModalOpen} initialMode={authMode} onClose={() => setAuthModalOpen(false)} />
     </>
   );
 }

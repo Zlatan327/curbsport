@@ -37,6 +37,32 @@ export interface SetLobby {
   status: "forming" | "ready";
 }
 
+export interface AuthUser {
+  id: number | string;
+  alias: string;
+  avatarUrl?: string | null;
+  reputationScore?: number;
+  schoolId?: number;
+  primarySport?: string;
+  favoritePosition?: string;
+  hasBall?: boolean;
+}
+
+export interface PitchDirection {
+  id: number | string;
+  pitchId: number | string;
+  userId?: number;
+  authorAlias?: string;
+  user?: { id: number; alias: string; avatarUrl?: string | null; reputationScore?: number };
+  directions: string;
+  landmarks?: string | null;
+  transitTip?: string | null;
+  verificationCount: number;
+  isVerified: boolean;
+  createdAt: string;
+  verifications?: { userId: number; createdAt: string }[];
+}
+
 export interface Pitch {
   id: string;
   campusId: string;
@@ -55,6 +81,9 @@ export interface Pitch {
   sets: SetLobby[];
   condition: string;
   updatedMinutesAgo: number;
+  latitude?: number;
+  longitude?: number;
+  directions?: PitchDirection[];
 }
 
 export interface MatchRecord {
