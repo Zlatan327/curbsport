@@ -50,63 +50,106 @@ export default function ProfilePage() {
     }
   }
 
-  return <AppFrame>
-    <section className="page-intro page-intro--profile"><p className="eyebrow">THE PLAYER CARD</p><h1>YOUR<br /><em>SIDE.</em></h1><p>Make your home ground yours.</p></section>
-    {!hydrated ? <div className="sign-in-loading">Checking player session...</div> : !token ? <SignInPrompt title="Your people are waiting." copy="Sign in to set your home campus and join local pickup sets." /> : <>
-      <section className="player-card">
-        <div className="player-card__stamp" style={{ overflow: "hidden", padding: 0 }}>
-          {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.alias || "Baller"} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "10px" }} />
-          ) : (
-            <UserRound size={28} />
-          )}
-        </div>
-        <div>
-          <p className="eyebrow">PLAYER / VERIFIED SESSION</p>
-          <h2>{userDisplayName(user)}</h2>
-          <p>{user?.alias || "Username linked to your account"}</p>
-          {user?.hasBall && (
-            <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              marginTop: "6px",
-              background: "linear-gradient(90deg, #ca8a04, #eab308)",
-              color: "#000",
-              fontWeight: 800,
-              fontSize: "0.72rem",
-              padding: "3px 8px",
-              borderRadius: "4px",
-              letterSpacing: "0.04em",
-              boxShadow: "0 0 8px rgba(234, 179, 8, 0.4)"
-            }}>
-              <span>{user.primarySport === "BASKETBALL" ? "🏀" : "⚽"} BALL OWNER</span>
-              {user.ballType && <span style={{ opacity: 0.9, fontWeight: 600 }}>• {user.ballType}</span>}
-            </div>
-          )}
-        </div>
-        <ShieldCheck className="player-card__shield" size={21} />
+  return (
+    <AppFrame>
+      <section className="page-intro page-intro--profile">
+        <p className="eyebrow"><span className="eyebrow-mark" /> PLAYER CARD</p>
+        <h1>PLAYER PROFILE</h1>
+        <p>Manage your home campus, stats, and identity across campus pickup sets.</p>
       </section>
-      <form className="profile-settings" onSubmit={saveSchool}><div className="form-section-heading"><span>01</span><div><p className="eyebrow">YOUR HOME GROUND</p><h2>SELECT YOUR CAMPUS</h2></div></div>
-        <Notice tone="info">Currently set to {schoolName}. Note: Once set, school transfers are locked for 14 days to prevent gaming.</Notice>
-        {schoolError && <Notice tone="warning">{schoolError}</Notice>}
-        {saved && <Notice tone="success">Campus successfully updated to {schools.find(s => s.id.toString() === schoolDraft)?.name || schoolDraft}.</Notice>}
-        <label className="field">
-          <span>CAMPUS</span>
-          <select value={schoolDraft} onChange={(event) => { setSchoolDraft(event.target.value); setSaved(false); setSchoolError(""); }} required>
-            <option value="" disabled>Select your school</option>
-            {schools.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </label>
-        <AsyncButton type="submit" variant="outline"><MapPin size={16} /> SAVE CAMPUS <ArrowUpRight size={16} /></AsyncButton>
-        {saved && <Notice tone="success">Campus successfully updated to {schools.find(s => s.id.toString() === schoolDraft)?.name || schoolDraft}.</Notice>}
-      </form>
-      {user?.id && <PlayerStats userId={user.id} />}
-      <EditProfile />
-      <button className="signout-button" type="button" onClick={signOut}><LogOut size={16} /> SIGN OUT</button>
-      <p className="profile-note">JWT stays in this browser&apos;s localStorage and is sent as a Bearer token on API calls.</p>
-    </>}
-  </AppFrame>;
+
+      {!hydrated ? (
+        <div className="sign-in-loading">Checking player session...</div>
+      ) : !token ? (
+        <SignInPrompt title="Your people are waiting." copy="Sign in to set your home campus and join local pickup sets." />
+      ) : (
+        <>
+          <section className="player-card">
+            <div className="player-card__stamp" style={{ overflow: "hidden", padding: 0 }}>
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.alias || "Baller"}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }}
+                />
+              ) : (
+                <UserRound size={28} />
+              )}
+            </div>
+            <div>
+              <p className="eyebrow">ACTIVE BALLER</p>
+              <h2>{userDisplayName(user)}</h2>
+              <p>{user?.alias || "Username linked to your account"}</p>
+              {user?.hasBall && (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    marginTop: "6px",
+                    background: "rgba(234, 179, 8, 0.15)",
+                    border: "1px solid rgba(234, 179, 8, 0.4)",
+                    color: "#facc15",
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  <span>{user.primarySport === "BASKETBALL" ? "🏀" : "⚽"} Ball owner</span>
+                  {user.ballType && <span style={{ opacity: 0.9, fontWeight: 500 }}>• {user.ballType}</span>}
+                </div>
+              )}
+            </div>
+            <ShieldCheck className="player-card__shield" size={21} />
+          </section>
+
+          <form className="profile-settings" onSubmit={saveSchool}>
+            <div className="form-section-heading">
+              <div>
+                <p className="eyebrow">LOCATION</p>
+                <h2>HOME CAMPUS</h2>
+              </div>
+            </div>
+            <Notice tone="info">
+              Currently set to {schoolName}. Note: Once set, school transfers are locked for 14 days to prevent gaming.
+            </Notice>
+            {schoolError && <Notice tone="warning">{schoolError}</Notice>}
+            {saved && (
+              <Notice tone="success">
+                Campus updated to {schools.find((s) => s.id.toString() === schoolDraft)?.name || schoolDraft}.
+              </Notice>
+            )}
+            <label className="field">
+              <span>Campus</span>
+              <select
+                value={schoolDraft}
+                onChange={(event) => {
+                  setSchoolDraft(event.target.value);
+                  setSaved(false);
+                  setSchoolError("");
+                }}
+                required
+              >
+                <option value="" disabled>Select your school</option>
+                {schools.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </label>
+            <AsyncButton type="submit" variant="outline">
+              <MapPin size={16} /> Save campus
+            </AsyncButton>
+          </form>
+
+          {user?.id && <PlayerStats userId={user.id} />}
+          <EditProfile />
+          <button className="signout-button" type="button" onClick={signOut}>
+            <LogOut size={16} /> Sign out
+          </button>
+          <p className="profile-note">Player token is encrypted in this browser session.</p>
+        </>
+      )}
+    </AppFrame>
+  );
 }

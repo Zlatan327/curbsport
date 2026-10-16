@@ -296,172 +296,198 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
   }
 
   if (isLoading && !pitch) return <AppFrame><LoadingState label="Finding this ground…" /></AppFrame>;
-  if (!pitch) return <AppFrame><div className="detail-not-found"><p className="eyebrow">PITCH NOT AVAILABLE</p><h1>GROUND<br /><em>UNKNOWN.</em></h1>{pitchError ? <Notice tone="warning" className="detail-notice">Unable to load this pitch. {pitchError.message}</Notice> : <p className="pitch-description">This pitch may have moved or the ID may be incorrect.</p>}<div className="button-row"><button type="button" className="button button--outline" onClick={() => void refreshPitch()}>RETRY</button><Link href="/" className="button button--green">BACK TO FEED <ArrowUpRight size={16} /></Link></div></div></AppFrame>;
+  if (!pitch) {
+    return (
+      <AppFrame>
+        <div className="detail-not-found">
+          <p className="eyebrow">SPOT UNAVAILABLE</p>
+          <h1>GROUND NOT FOUND</h1>
+          {pitchError ? (
+            <Notice tone="warning" className="detail-notice">Unable to load this pitch. {pitchError.message}</Notice>
+          ) : (
+            <p className="pitch-description">This ground may have been relocated or the ID is incorrect.</p>
+          )}
+          <div className="button-row">
+            <button type="button" className="button button--outline" onClick={() => void refreshPitch()}>Retry</button>
+            <Link href="/" className="button button--green">Back to campus feed</Link>
+          </div>
+        </div>
+      </AppFrame>
+    );
+  }
 
   const verified = pitch.verificationStatus.toUpperCase() === "COMMUNITY_VERIFIED";
   const directionsUrl = getDirectionsUrl(pitch);
 
-  return <AppFrame>
-    <Link href="/" className="back-link"><ArrowLeft size={15} /> BACK TO THE LIST</Link>
-    <section className="detail-hero">
-      {pitch.imageUrl ? (
-        <img src={pitch.imageUrl} alt={pitch.name} className="detail-hero__image" />
-      ) : (
-        <MapPlaceholder large />
-      )}
-      <div className="detail-hero__top">
-        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-          <StatusBadge status={pitch.activeStatus} />
-          <span className="sport-pill">{isBasketball ? "🏀 BASKETBALL" : "⚽ FOOTBALL"}</span>
+  return (
+    <AppFrame>
+      <Link href="/" className="back-link">
+        <ArrowLeft size={15} /> Back to grounds
+      </Link>
+      <section className="detail-hero">
+        {pitch.imageUrl ? (
+          <img src={pitch.imageUrl} alt={pitch.name} className="detail-hero__image" />
+        ) : (
+          <MapPlaceholder large />
+        )}
+        <div className="detail-hero__top">
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <StatusBadge status={pitch.activeStatus} />
+            <span className={`sport-pill ${isBasketball ? "sport-pill--basketball" : "sport-pill--football"}`}>
+              {isBasketball ? "🏀 Basketball" : "⚽ Football"}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <button
+              type="button"
+              className="hero-photo-btn"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={uploadingImage || isDemo}
+              title="Add or update ground photo"
+            >
+              <Camera size={13} /> {uploadingImage ? "Saving..." : pitch.imageUrl ? "Change photo" : "Add photo"}
+            </button>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handlePhotoUpload}
+            />
+            <span className={`verification-tag${verified ? " is-verified" : " is-ghost"}`}>
+              {verified ? <><ShieldCheck size={14} /> Verified</> : "👻 Unverified"}
+            </span>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-          <button
-            type="button"
-            className="hero-photo-btn"
-            onClick={() => photoInputRef.current?.click()}
-            disabled={uploadingImage || isDemo}
-            title="Add or update ground photo"
-          >
-            <Camera size={13} /> {uploadingImage ? "SAVING..." : pitch.imageUrl ? "CHANGE PHOTO" : "ADD PHOTO"}
-          </button>
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={handlePhotoUpload}
-          />
-          <span className={`verification-tag${verified ? " is-verified" : " is-ghost"}`}>
-            {verified ? <><ShieldCheck size={14} /> COMMUNITY VERIFIED</> : "👻 GHOST PITCH"}
-          </span>
-        </div>
-      </div>
-      <div className="detail-hero__caption">
-        <p className="eyebrow">ANAMBRA / FIELD REPORT</p>
-        <h1>{pitch.name}</h1>
-        <p><MapPin size={14} /> {pitch.area || pitch.address || "Anambra State"}</p>
-        <div className="hero-actions-row" style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" }}>
-          <a
-            href={directionsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hero-directions-link"
-            aria-label={`Get turn-by-turn directions to ${pitch.name}`}
-          >
-            <Navigation size={14} /> GET DIRECTIONS (GOOGLE MAPS)
-          </a>
-          {pitch.hasBallNow ? (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-              <span className="ball-confirmed-badge">
-                {isBasketball ? "🏀 BALL ON COURT" : "⚽ BALL DEY GROUND"}
-              </span>
+        <div className="detail-hero__caption">
+          <p className="eyebrow">CAMPUS GROUND</p>
+          <h1>{pitch.name}</h1>
+          <p><MapPin size={14} /> {pitch.area || pitch.address || "Campus grounds"}</p>
+          <div className="hero-actions-row" style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" }}>
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hero-directions-link"
+              aria-label={`Get directions to ${pitch.name}`}
+            >
+              <Navigation size={14} /> Get directions
+            </a>
+            {pitch.hasBallNow ? (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <span className="ball-confirmed-badge">
+                  {isBasketball ? "🏀 Ball on court" : "⚽ Ball on ground"}
+                </span>
+                <button
+                  type="button"
+                  className="ball-leaving-btn"
+                  disabled={ballChecking || isDemo}
+                  onClick={() => setShowBallLeavingModal(true)}
+                  title="Report that the match ball is leaving"
+                >
+                  {ballChecking ? <LoaderCircle className="spin" size={12} /> : <span>🏃</span>}
+                  <span>Ball leaving</span>
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
-                className="ball-leaving-btn"
+                className="ball-checkin-btn"
+                disabled={ballChecking || isDemo}
+                onClick={() => void handleBallCheckin(true)}
+                title="Check in with match equipment to alert campus and earn +10 REP"
+              >
+                {ballChecking ? (
+                  <LoaderCircle className="spin" size={13} />
+                ) : isBasketball ? (
+                  <span>🏀</span>
+                ) : (
+                  <span>⚽</span>
+                )}
+                <span>{isBasketball ? "I dey court with ball" : "I dey ground with ball"}</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <GroundConditionPills
+        pitchId={id}
+        pitchName={pitch.name}
+        sportType={isBasketball ? "BASKETBALL" : "FOOTBALL"}
+        isDemo={isDemo}
+        token={token}
+        onConditionBroadcast={(msg) => {
+          setActionNote(msg);
+          void refreshBanter();
+        }}
+      />
+
+      {pitch.hasBallNow && (
+        <div className="hero-ball-beacon">
+          <span className="hero-ball-beacon__icon">{isBasketball ? "🏀" : "⚽"}</span>
+          <div className="hero-ball-beacon__body">
+            <strong>{isBasketball ? "Match ball on court right now!" : "Match ball on ground right now!"}</strong>
+            <span>Brought by <strong>{pitch.ballBroughtBy || "a baller"}</strong> {pitch.ballReportedAt ? `• Spotted ${displayTime(pitch.ballReportedAt)}` : ""} • Pickup can fly!</span>
+          </div>
+          <div style={{ marginLeft: "auto", display: "flex", gap: "6px", alignItems: "center" }}>
+            <button
+              type="button"
+              className="beacon-wa-btn"
+              onClick={() => void handleShareBallBeacon()}
+              title="Broadcast equipment status to WhatsApp group"
+            >
+              <Share2 size={12} /> <span>Share</span>
+            </button>
+            {token && (
+              <button
+                type="button"
+                className="beacon-leaving-btn"
                 disabled={ballChecking || isDemo}
                 onClick={() => setShowBallLeavingModal(true)}
-                title="Report that the match ball is leaving or turn off equipment status"
+                title="Turn off ball on site status if ball is leaving"
               >
-                {ballChecking ? <LoaderCircle className="spin" size={12} /> : <span>🏃</span>}
-                <span>BALL LEAVING? TURN OFF</span>
+                {user?.alias === pitch.ballBroughtBy ? "I'm leaving with ball" : "Report ball left"}
               </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="ball-checkin-btn"
-              disabled={ballChecking || isDemo}
-              onClick={() => void handleBallCheckin(true)}
-              title="Check in with match equipment to alert campus and earn +10 REP"
-            >
-              {ballChecking ? (
-                <LoaderCircle className="spin" size={13} />
-              ) : isBasketball ? (
-                <span>🏀</span>
-              ) : (
-                <span>⚽</span>
-              )}
-              {isBasketball ? "I DEY WITH BASKETBALL" : "I DEY GROUND WITH BALL"}
-            </button>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-    </section>
+      )}
+      {isDemo && <Notice tone="warning" className="offline-notice"><strong>SAMPLE PREVIEW</strong><span>This is preview content. Connect the API for live pitch data and actions.</span></Notice>}
+      {pitchError && !isDemo && <Notice tone="warning" className="offline-notice"><strong>API ERROR</strong><span>{pitchError.message}</span><button type="button" onClick={() => void refreshPitch()}>Retry</button></Notice>}
 
-    <GroundConditionPills
-      pitchId={id}
-      pitchName={pitch.name}
-      sportType={isBasketball ? "BASKETBALL" : "FOOTBALL"}
-      isDemo={isDemo}
-      token={token}
-      onConditionBroadcast={(msg) => {
-        setActionNote(msg);
-        void refreshBanter();
-      }}
-    />
+      <section className="detail-stats">
+        <div><strong>{pitch.playersNow || 0}</strong><span>{isBasketball ? "Ballers on court" : "Players on ground"}</span></div>
+        <div><strong>{pitch.setsToday || 0}</strong><span>{isBasketball ? "Runs today" : "Sets today"}</span></div>
+        <div><strong>{pitch.upvotes || 0}</strong><span>{isBasketball ? "Court checks" : "Ground checks"}</span></div>
+      </section>
 
-    {pitch.hasBallNow && (
-      <div className="hero-ball-beacon">
-        <span className="hero-ball-beacon__icon">{isBasketball ? "🏀" : "⚽"}</span>
-        <div className="hero-ball-beacon__body">
-          <strong>{isBasketball ? "BALL ON COURT RIGHT NOW!" : "MATCH BALL DEY GROUND RIGHT NOW!"}</strong>
-          <span>Brought by <strong>{pitch.ballBroughtBy || "a baller"}</strong> {pitch.ballReportedAt ? `• Spotted ${displayTime(pitch.ballReportedAt)}` : ""} • Game can fly!</span>
-        </div>
-        <div style={{ marginLeft: "auto", display: "flex", gap: "6px", alignItems: "center" }}>
+      <StatKing pitchId={id} isDemo={isDemo} sportType={isBasketball ? "BASKETBALL" : "FOOTBALL"} />
+
+      <div className="detail-tabs" role="tablist" aria-label="Pitch sections">
+        {(["info", "sets", "banter"] as Tab[]).map((item) => (
           <button
             type="button"
-            className="beacon-wa-btn"
-            onClick={() => void handleShareBallBeacon()}
-            title="Broadcast equipment status to WhatsApp group"
+            key={item}
+            role="tab"
+            aria-selected={tab === item}
+            className={tab === item ? "is-selected" : ""}
+            onClick={() => { setTab(item); setActionError(""); setActionNote(""); }}
           >
-            <Share2 size={12} /> <span>BROADCAST</span>
+            {item === "info" ? "Ground HQ" : item === "sets" ? (isBasketball ? "Pickup Runs" : "Match Sets") : "Banter Wall"}
+            {item === "sets" && <span>{lobbies.length}</span>}
           </button>
-          {token && (
-            <button
-              type="button"
-              className="beacon-leaving-btn"
-              disabled={ballChecking || isDemo}
-              onClick={() => setShowBallLeavingModal(true)}
-              title="Turn off ball on site status if ball is leaving"
-            >
-              {user?.alias === pitch.ballBroughtBy ? "I'M LEAVING WITH BALL" : "REPORT BALL LEFT"}
-            </button>
-          )}
-        </div>
+        ))}
       </div>
-    )}
-    {isDemo && <Notice tone="warning" className="offline-notice"><strong>SAMPLE PREVIEW</strong><span>This is demo content; connect the API for live pitch data and actions.</span></Notice>}
-    {pitchError && !isDemo && <Notice tone="warning" className="offline-notice"><strong>API ERROR</strong><span>{pitchError.message}</span><button type="button" onClick={() => void refreshPitch()}>RETRY</button></Notice>}
 
-    <section className="detail-stats">
-      <div><strong>{pitch.playersNow || 0}</strong><span>{isBasketball ? "ON THE COURT" : "ON THE GROUND"}</span></div>
-      <div><strong>{pitch.setsToday || 0}</strong><span>{isBasketball ? "RUNS TODAY" : "SETS TODAY"}</span></div>
-      <div><strong>{pitch.upvotes || 0}</strong><span>{isBasketball ? "COURT CHECKS" : "GROUND CHECKS"}</span></div>
-    </section>
+      {actionError && <Notice tone="warning" className="detail-notice">{actionError}</Notice>}
+      {actionNote && <Notice tone="success" className="detail-notice">{actionNote}</Notice>}
 
-    <StatKing pitchId={id} isDemo={isDemo} sportType={isBasketball ? "BASKETBALL" : "FOOTBALL"} />
-
-    <div className="detail-tabs" role="tablist" aria-label="Pitch sections">
-      {(["info", "sets", "banter"] as Tab[]).map((item) => (
-        <button
-          type="button"
-          key={item}
-          role="tab"
-          aria-selected={tab === item}
-          className={tab === item ? "is-selected" : ""}
-          onClick={() => { setTab(item); setActionError(""); setActionNote(""); }}
-        >
-          {item === "info" ? "INFO" : item === "sets" ? (isBasketball ? "RUNS" : "SETS") : "BANTER"}
-          {item === "sets" && <span>{lobbies.length}</span>}
-        </button>
-      ))}
-    </div>
-
-    {actionError && <Notice tone="warning" className="detail-notice">{actionError}</Notice>}
-    {actionNote && <Notice tone="success" className="detail-notice">{actionNote}</Notice>}
-
-    {tab === "info" && <section className="tab-panel info-panel" role="tabpanel">
-      <div className="info-panel__heading"><p className="eyebrow">{isBasketball ? "THE COURT CHECK" : "THE GROUND CHECK"}</p><h2>KNOW BEFORE<br /><em>YOU MOVE.</em></h2></div>
+      {tab === "info" && <section className="tab-panel info-panel" role="tabpanel">
+        <div className="info-panel__heading">
+          <p className="eyebrow">{isBasketball ? "COURT PROFILE" : "GROUND PROFILE"}</p>
+          <h2>LOCATION & DIRECTIONS</h2>
+        </div>
       <p className="pitch-description">{pitch.description || pitch.landmarkDescription || (isBasketball ? "The local court is on the board. Add a chat message or start a run to get ballers moving." : "The local ground is on the board. Add a banter message or start a set to get the people moving.")}</p>
       <div className="info-location">
         <MapPin size={17} />
@@ -847,5 +873,6 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
         </div>
       </div>
     )}
-  </AppFrame>;
+  </AppFrame>
+);
 }

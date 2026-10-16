@@ -56,102 +56,82 @@ export default function FeedPage() {
     <AppFrame>
       <section className="feed-masthead">
         <div className="feed-masthead__headline">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p className="eyebrow"><span className="eyebrow-mark" /> CAMPUS GROUND MAP</p>
-            <button
-              type="button"
-              onClick={() => setShowHowToUse(true)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                background: "#1c281e",
-                border: "1px solid #00f076",
-                color: "#00f076",
-                borderRadius: "20px",
-                padding: "3px 10px",
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              <HelpCircle size={13} /> HOW TO PLAY
-            </button>
-          </div>
-          <h1>FIND<br /><em>YOUR</em> GROUND.</h1>
-          <p className="feed-intro">Real pitches. Real sets. Right around {schoolName}.</p>
+          <p className="eyebrow"><span className="eyebrow-mark" /> CAMPUS RADAR</p>
+          <h1>CAMPUS GROUND RADAR</h1>
+          <p className="feed-intro">Live pickup football pitches and basketball courts across {schoolName}.</p>
         </div>
-        <div className="feed-stamp"><span>NO.</span><strong>01</strong><small>LOCAL<br />GAME</small></div>
-        <div className="feed-masthead__rule"><span>THE GROUND CHECK</span><span>{liveCount.toString().padStart(2, "0")} LIVE RIGHT NOW</span></div>
+        <div className="feed-ticker">
+          <div className="feed-ticker__status">
+            <span className="feed-ticker__dot" />
+            <span>{liveCount > 0 ? `${liveCount} games live right now` : "Checking campus grounds"}</span>
+          </div>
+          <button
+            type="button"
+            className="feed-ticker__btn"
+            onClick={() => setShowHowToUse(true)}
+            aria-label="How pickup works"
+          >
+            <HelpCircle size={13} /> How to play
+          </button>
+        </div>
       </section>
 
       <Link href="/map" className="map-teaser">
         <MapPlaceholder pitches={pitches} />
-        <div className="map-teaser__copy"><span className="eyebrow">PITCHES ON THE MAP</span><strong>See what&apos;s close</strong><span className="map-teaser__link">OPEN MAP <ArrowUpRight size={15} /></span></div>
+        <div className="map-teaser__copy">
+          <span className="eyebrow">CAMPUS OVERVIEW</span>
+          <strong>Explore map & nearby spots</strong>
+          <span className="map-teaser__link">Open map</span>
+        </div>
       </Link>
 
-      {error && <Notice tone="warning" className="offline-notice"><strong>API OFFLINE / PREVIEW MODE</strong><span>Showing sample grounds. Check the backend URL, CORS, and campus ID before sharing live data.</span><button type="button" onClick={() => void mutate()} aria-label="Retry API connection"><RefreshCw size={14} /> RETRY</button></Notice>}
+      {error && (
+        <Notice tone="warning" className="offline-notice">
+          <strong>API OFFLINE / PREVIEW MODE</strong>
+          <span>Showing sample grounds. Check the backend connection before sharing live data.</span>
+          <button type="button" onClick={() => void mutate()} aria-label="Retry API connection">
+            <RefreshCw size={14} /> Retry
+          </button>
+        </Notice>
+      )}
 
       <section className="feed-section">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">GROUND REPORT / {schoolName.toUpperCase()}</p>
-            <h2>THE PITCH LIST<span className="section-heading__count">{visiblePitches.length.toString().padStart(2, "0")}</span></h2>
+            <p className="eyebrow">{schoolName.toUpperCase()} GROUNDS</p>
+            <h2>ACTIVE GROUNDS<span className="section-heading__count">{visiblePitches.length}</span></h2>
           </div>
-          <Link href="/add" className="text-link">DROP A PIN <ArrowUpRight size={15} /></Link>
+          <Link href="/add" className="text-link">Add ground</Link>
         </div>
 
-        {/* Sport Noise Filter Pills */}
-        <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+        {/* Sport Noise Filter Segmented Control */}
+        <div className="sport-filter-bar" role="tablist" aria-label="Filter by sport">
           <button
             type="button"
+            role="tab"
+            aria-selected={sportFilter === "FOOTBALL"}
+            className={`sport-filter-btn${sportFilter === "FOOTBALL" ? " is-active-football" : ""}`}
             onClick={() => setSportFilter("FOOTBALL")}
-            style={{
-              flex: 1,
-              padding: "7px 12px",
-              borderRadius: "20px",
-              border: sportFilter === "FOOTBALL" ? "1px solid #00f076" : "1px solid #333",
-              background: sportFilter === "FOOTBALL" ? "#00381b" : "#141414",
-              color: sportFilter === "FOOTBALL" ? "#00f076" : "#aaa",
-              fontSize: "0.78rem",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
           >
             ⚽ Football
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={sportFilter === "BASKETBALL"}
+            className={`sport-filter-btn${sportFilter === "BASKETBALL" ? " is-active-basketball" : ""}`}
             onClick={() => setSportFilter("BASKETBALL")}
-            style={{
-              flex: 1,
-              padding: "7px 12px",
-              borderRadius: "20px",
-              border: sportFilter === "BASKETBALL" ? "1px solid #00f076" : "1px solid #333",
-              background: sportFilter === "BASKETBALL" ? "#00381b" : "#141414",
-              color: sportFilter === "BASKETBALL" ? "#00f076" : "#aaa",
-              fontSize: "0.78rem",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
           >
             🏀 Basketball
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={sportFilter === "ALL"}
+            className={`sport-filter-btn${sportFilter === "ALL" ? " is-active-all" : ""}`}
             onClick={() => setSportFilter("ALL")}
-            style={{
-              padding: "7px 14px",
-              borderRadius: "20px",
-              border: sportFilter === "ALL" ? "1px solid #00f076" : "1px solid #333",
-              background: sportFilter === "ALL" ? "#00381b" : "#141414",
-              color: sportFilter === "ALL" ? "#00f076" : "#aaa",
-              fontSize: "0.78rem",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
           >
-            🔥 Both
+            All grounds
           </button>
         </div>
 
