@@ -360,6 +360,17 @@ export async function createPitch(payload: {
   return normalizePitch(await apiFetch<unknown>("/pitches", { method: "POST", body: JSON.stringify(payload) }));
 }
 
+export async function updatePitchStatus(
+  pitchId: string | number,
+  activeStatus: "DRY" | "BUILDING" | "LIVE"
+): Promise<Pitch> {
+  const res = await apiFetch<{ pitch: unknown }>(`/pitches/${encodeURIComponent(pitchId)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ activeStatus }),
+  });
+  return normalizePitch(res.pitch || res);
+}
+
 export async function updatePitchImage(pitchId: string | number, imageUrl: string): Promise<Pitch> {
   const res = await apiFetch<{ pitch: unknown }>(`/pitches/${encodeURIComponent(pitchId)}/image`, {
     method: "PATCH",

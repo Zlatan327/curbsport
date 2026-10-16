@@ -119,3 +119,25 @@ export function formatMatchResultWhatsAppMessage(params: {
 
   return lines.join('\n');
 }
+
+export function formatPitchRallyWhatsAppMessage(params: {
+  pitchName: string;
+  pitchArea?: string;
+  sportType?: 'FOOTBALL' | 'BASKETBALL';
+  activeStatus?: string;
+  hasBall?: boolean;
+  pitchUrl: string;
+}): string {
+  const isBball = params.sportType === 'BASKETBALL';
+  const icon = isBball ? '🏀' : '⚽';
+  const groundType = isBball ? 'Basketball Court' : 'Football Pitch';
+  const statusNote = params.activeStatus === 'LIVE' ? '🔥 Game is LIVE right now!' : params.hasBall ? '⚽ Ball dey ground!' : 'Pull up for pickup!';
+  return [
+    `${icon} *PULL UP TO ${params.pitchName.toUpperCase()}!*`,
+    `🏟️ *${groundType}:* ${params.pitchName}${params.pitchArea ? ` (${params.pitchArea})` : ''}`,
+    `⚡ *Status:* ${statusNote}`,
+    ``,
+    `👉 *Get live directions, see who is there & join the set:*`,
+    params.pitchUrl,
+  ].join('\n');
+}

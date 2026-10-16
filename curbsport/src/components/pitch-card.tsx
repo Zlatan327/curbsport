@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
-import { MapPin, Navigation, Users } from "lucide-react";
+import { MapPin, Navigation, Share2, Users } from "lucide-react";
 import type { Pitch } from "@/lib/types";
 import { getDirectionsUrl } from "@/lib/api";
 import { StatusBadge } from "@/components/status-badge";
+import { formatPitchRallyWhatsAppMessage, shareToWhatsApp } from "@/lib/share";
 
 function CourtSchematic({ isBasketball }: { isBasketball: boolean }) {
   if (isBasketball) {
@@ -66,6 +69,23 @@ export function PitchCard({ pitch }: { pitch: Pitch }) {
   const isBasketball = pitch.sportType === "BASKETBALL" || pitch.name.toLowerCase().includes("basketball") || pitch.name.toLowerCase().includes("court");
   const directionsUrl = getDirectionsUrl(pitch);
 
+  const handleRallySquad = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentUrl = typeof window !== "undefined"
+      ? `${window.location.origin}/pitches/${encodeURIComponent(pitch.id)}`
+      : `https://curbsport.vercel.app/pitches/${encodeURIComponent(pitch.id)}`;
+    const msg = formatPitchRallyWhatsAppMessage({
+      pitchName: pitch.name,
+      pitchArea: pitch.area || pitch.address,
+      sportType: isBasketball ? "BASKETBALL" : "FOOTBALL",
+      activeStatus: pitch.activeStatus,
+      hasBall: pitch.hasBallNow,
+      pitchUrl: currentUrl,
+    });
+    await shareToWhatsApp(msg);
+  };
+
   return (
     <article className="pitch-card">
       <Link href={`/pitches/${encodeURIComponent(pitch.id)}`} className="pitch-card__link" aria-label={`Inspect ${pitch.name}`}>
@@ -113,6 +133,16 @@ export function PitchCard({ pitch }: { pitch: Pitch }) {
           <p className="pitch-card__description">
             {pitch.description || "Active community pickup spot. Check in or report status before you move."}
           </p>
+
+          <div style={{ display: "flex", gap: "6px", alignItems: "center", margin: "6px 0 2px" }}>
+            <span style={{ fontSize: "10px", padding: "2px 6px", background: "rgba(255,255,255,0.06)", borderRadius: "4px", color: "#aaa" }}>
+              {pitch.fieldType || (isBasketball ? "Court" : "Ground")}
+            </span>
+            <span style={{ fontSize: "10px", padding: "2px 6px", background: "rgba(0, 255, 102, 0.08)", borderRadius: "4px", color: "var(--turf)" }}>
+              {pitch.priceBracket || "Free"}
+            </span>
+          </div>
+
           <div className="pitch-card__footer">
             <span>
               <Users size={14} /> {pitch.playersNow || 0} ballers active
@@ -122,15 +152,24 @@ export function PitchCard({ pitch }: { pitch: Pitch }) {
         </div>
       </Link>
 
-      <div className="pitch-card__actions">
+      <div className="pitch-card__actions" style={{ display: "flex", gap: "6px" }}>
+        <button
+          type="button"
+          onClick={handleRallySquad}
+          className="pitch-card__rally-btn"
+          aria-label={`Rally squad to ${pitch.name}`}
+        >
+          <Share2 size={12} /> Rally Squad
+        </button>
         <a
           href={directionsUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="pitch-card__directions-btn"
           aria-label={`Get directions to ${pitch.name}`}
+          style={{ flex: 1 }}
         >
-          <Navigation size={13} /> Get directions
+          <Navigation size={13} /> Directions
         </a>
       </div>
 

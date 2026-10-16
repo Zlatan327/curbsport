@@ -7,6 +7,9 @@ export interface Pitch {
   sportType?: SportType;
   description?: string;
   landmarkDescription?: string;
+  fieldType?: string;
+  priceBracket?: string;
+  schoolId?: number;
   address?: string;
   area?: string;
   city?: string;

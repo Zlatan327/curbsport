@@ -532,13 +532,9 @@ pitchRouter.post('/:id/directions', authMiddleware, validate(submitDirectionsSch
       return;
     }
 
+    // Allow any registered player to submit community ground navigation cues.
+    // They start as unverified community contributions and become official once confirmed by 2+ peers.
     const attended = await userHasAttendedPitch(userId, pitchId, pitch.createdById, pitch.ballBroughtBy, user.alias);
-    if (!attended) {
-      res.status(403).json({
-        error: 'Only players who have played sets, confirmed matches, or voted at this ground can upload verified directions.',
-      });
-      return;
-    }
 
     // Create community direction
     const newDirection = await prisma.pitchDirection.create({
@@ -599,11 +595,8 @@ pitchRouter.post('/:id/directions/:directionId/verify', authMiddleware, async (r
       return;
     }
 
-    const attended = await userHasAttendedPitch(userId, pitchId, pitch.createdById, pitch.ballBroughtBy, user.alias);
-    if (!attended) {
-      res.status(403).json({
-        error: 'Only players who have played or attended this ground can verify directions.',
-      });
+    if (direction.userId === userId) {
+      res.status(400).json({ error: 'You cannot verify your own submitted directions.' });
       return;
     }
 

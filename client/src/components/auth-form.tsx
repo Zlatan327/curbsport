@@ -9,10 +9,13 @@ import { useAuthStore } from "@/store/auth";
 import { AsyncButton } from "@/components/async-button";
 import { Notice } from "@/components/notice";
 
+import { useSchoolId } from "@/hooks/use-school-id";
+
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const isRegister = mode === "register";
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);
+  const { schoolId, schoolName } = useSchoolId();
   const [alias, setAlias] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -28,9 +31,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     
     setBusy(true);
     try {
-      // NOTE: schoolId defaults to 1 (UNIZIK Awka) for now during MVP auth flow
+      const activeSchoolId = Number(schoolId) || 6;
       const result = isRegister
-        ? await register({ alias: alias.trim(), password, schoolId: 1 })
+        ? await register({ alias: alias.trim(), password, schoolId: activeSchoolId })
         : await login({ alias: alias.trim(), password });
         
       if (!result?.token) throw new Error("The API response did not include a token.");

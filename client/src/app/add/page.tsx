@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, type ChangeEvent, type FormEvent, type MouseEvent } from "react";
-import { ArrowUpRight, Camera, MapPin, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, Camera, CheckCircle2, MapPin, Save, Trash2 } from "lucide-react";
+import { useSWRConfig } from "swr";
 import { z } from "zod";
 import { AppFrame } from "@/components/app-frame";
 import { MapPlaceholder } from "@/components/map-placeholder";
@@ -10,34 +12,62 @@ import { AsyncButton } from "@/components/async-button";
 import { SignInPrompt } from "@/components/sign-in-prompt";
 import { useAuthStore } from "@/store/auth";
 import { createPitch } from "@/lib/api";
+import { useSchoolId } from "@/hooks/use-school-id";
 
 const pitchSchema = z.object({
   name: z.string().trim().min(3, "Give this ground a name (at least 3 characters)."),
-  area: z.string().trim().min(2, "Add the local area or community."),
-  address: z.string().trim().min(4, "Add a landmark or directions players can use."),
+  area: z.string().trim().min(2, "Add the local area or campus zone."),
+  address: z.string().trim().min(4, "Add landmark cues or walking directions players can use."),
   description: z.string().trim().max(240, "Keep the description under 240 characters."),
 });
 
 export default function AddPitchPage() {
   const { token, user, hydrated } = useAuthStore();
+  const { schoolId, updateSchoolId, campuses } = useSchoolId();
+  const { mutate } = useSWRConfig();
+
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>(schoolId || "6");
   const [name, setName] = useState("");
   const [area, setArea] = useState("");
   const [address, setAddress] = useState("");
   const [description, setDescription] = useState("");
-  const [sportType, setSportType] = useState<"FOOTBALL" | "BASKETBALL">(
-    user?.primarySport === "BASKETBALL" ? "BASKETBALL" : "FOOTBALL"
-  );
+  const [sportType, setSportType] = useState<"FOOTBALL" | "BASKETBALL">("FOOTBALL");
+  const [userToggledSport, setUserToggledSport] = useState(false);
+  const [fieldType, setFieldType] = useState<"Street Arena" | "School Ground" | "Paid Turf">("Street Arena");
+  const [priceBracket, setPriceBracket] = useState<string>("Free");
   const [status, setStatus] = useState("DRY");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [pin, setPin] = useState({ x: 52, y: 48 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [publishedPitch, setPublishedPitch] = useState<{ id: string | number; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Keep selectedSchoolId in sync if schoolId changes externally
+  if (selectedSchoolId !== schoolId && !userToggledSport && selectedSchoolId === "6" && schoolId) {
+    setSelectedSchoolId(schoolId);
+  }
+
+  function handleNameChange(val: string) {
+    setName(val);
+    // Intelligent sport detection only if user hasn't manually pressed a sport toggle button
+    if (!userToggledSport) {
+      const lower = val.toLowerCase();
+      if (lower.includes("court") || lower.includes("hoop") || lower.includes("basketball") || lower.includes("3v3") || lower.includes("dunk")) {
+        setSportType("BASKETBALL");
+      } else if (lower.includes("pitch") || lower.includes("turf") || lower.includes("field") || lower.includes("maracana") || lower.includes("stadium") || lower.includes("aside") || lower.includes("football") || lower.includes("soccer")) {
+        setSportType("FOOTBALL");
+      }
+    }
+  }
 
   function placePin(event: MouseEvent<HTMLDivElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
-    setPin({ x: Math.round(((event.clientX - bounds.left) / bounds.width) * 100), y: Math.round(((event.clientY - bounds.top) / bounds.height) * 100) });
+    setPin({
+      x: Math.round(((event.clientX - bounds.left) / bounds.width) * 100),
+      y: Math.round(((event.clientY - bounds.top) / bounds.height) * 100),
+    });
   }
 
   function handleImageFile(event: ChangeEvent<HTMLInputElement>) {
@@ -92,21 +122,31 @@ export default function AddPitchPage() {
     setBusy(true);
 
     try {
-      await createPitch({
-        name,
+      const targetSchoolId = Number(selectedSchoolId) || Number(user?.schoolId) || 6;
+      const created = await createPitch({
+        name: name.trim(),
         sportType,
-        address: `${area} — ${address}`,
-        landmarkDescription: `${area} — ${address}${description ? `. Note: ${description}` : ""}`,
+        fieldType,
+        priceBracket,
+        address: `${area.trim()} — ${address.trim()}`,
+        landmarkDescription: `${area.trim()} — ${address.trim()}${description.trim() ? `. Note: ${description.trim()}` : ""}`,
         imageUrl: imageUrl || undefined,
-        schoolId: Number(user?.schoolId || 1),
+        schoolId: targetSchoolId,
       });
+
+      // Invalidate SWR cache so feed shows the new pitch immediately
+      await mutate(["pitches", String(targetSchoolId)]);
+      updateSchoolId(String(targetSchoolId));
+
       const draft = { ...result.data, sportType, status, imageUrl, mapX: pin.x, mapY: pin.y, createdAt: new Date().toISOString(), savedLocally: true };
       const draftsRaw = window.localStorage.getItem("curbsport-pitch-drafts") || window.localStorage.getItem("inside-life-pitch-drafts") || "[]";
       const savedDrafts = JSON.parse(draftsRaw) as unknown[];
       const updatedDrafts = JSON.stringify([draft, ...savedDrafts]);
       window.localStorage.setItem("curbsport-pitch-drafts", updatedDrafts);
       window.localStorage.setItem("inside-life-pitch-drafts", updatedDrafts);
+
       setSaved(true);
+      setPublishedPitch({ id: created.id, name: created.name });
       setName(""); setArea(""); setAddress(""); setDescription(""); setImageUrl(null);
     } catch (err: any) {
       setError(err instanceof Error ? err.message : "Could not publish ground to the server.");
@@ -114,6 +154,8 @@ export default function AddPitchPage() {
       setBusy(false);
     }
   }
+
+  const activeCampusObj = campuses.find((c) => String(c.id) === String(selectedSchoolId));
 
   return (
     <AppFrame>
@@ -138,27 +180,74 @@ export default function AddPitchPage() {
             </div>
 
             {error && <Notice tone="warning">{error}</Notice>}
-            {saved && (
-              <Notice tone="success">
-                <strong>Ground published!</strong> Your pitch is now active on the campus board for the community to play and verify.
-              </Notice>
+            {saved && publishedPitch && (
+              <div style={{ padding: "14px", background: "rgba(0, 240, 118, 0.12)", border: "1px solid #00f076", borderRadius: "8px", marginBottom: "16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#00f076", fontWeight: 800, fontSize: "0.95rem" }}>
+                  <CheckCircle2 size={18} />
+                  <span>Ground published to {activeCampusObj?.name || "your campus"}!</span>
+                </div>
+                <p style={{ margin: "6px 0 12px", fontSize: "0.82rem", color: "#ddd" }}>
+                  &ldquo;{publishedPitch.name}&rdquo; is now live on the ground radar for teammates to pull up and verify.
+                </p>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <Link
+                    href={`/pitches/${encodeURIComponent(publishedPitch.id)}`}
+                    className="button button--green"
+                    style={{ fontSize: "0.8rem", padding: "6px 14px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    Open Ground Page <ArrowUpRight size={14} />
+                  </Link>
+                  <Link
+                    href="/"
+                    className="button button--outline"
+                    style={{ fontSize: "0.8rem", padding: "6px 14px" }}
+                  >
+                    Back to Feed
+                  </Link>
+                </div>
+              </div>
             )}
+
+            {/* Campus Selector */}
+            <label className="field">
+              <span>Campus / University *</span>
+              <select
+                value={selectedSchoolId}
+                onChange={(e) => {
+                  setSelectedSchoolId(e.target.value);
+                  updateSchoolId(e.target.value);
+                }}
+                style={{ background: "#111", color: "#fff", border: "1px solid #333", borderRadius: "6px", padding: "8px 10px", fontSize: "0.85rem" }}
+              >
+                {campuses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — {c.state} ({c.pitchesCount ?? 0} grounds)
+                  </option>
+                ))}
+              </select>
+            </label>
 
             {/* Sport Type Selector */}
             <div className="field">
-              <span>Sport type</span>
+              <span>Sport type *</span>
               <div className="sport-filter-bar" style={{ margin: "4px 0" }}>
                 <button
                   type="button"
                   className={`sport-filter-btn${sportType === "FOOTBALL" ? " is-active-football" : ""}`}
-                  onClick={() => setSportType("FOOTBALL")}
+                  onClick={() => {
+                    setSportType("FOOTBALL");
+                    setUserToggledSport(true);
+                  }}
                 >
                   ⚽ Football (Soccer)
                 </button>
                 <button
                   type="button"
                   className={`sport-filter-btn${sportType === "BASKETBALL" ? " is-active-basketball" : ""}`}
-                  onClick={() => setSportType("BASKETBALL")}
+                  onClick={() => {
+                    setSportType("BASKETBALL");
+                    setUserToggledSport(true);
+                  }}
                 >
                   🏀 Basketball
                 </button>
@@ -166,40 +255,60 @@ export default function AddPitchPage() {
             </div>
 
             <label className="field">
-              <span>Ground name</span>
+              <span>Ground name *</span>
               <input
                 value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="e.g. New Hall Quad Court"
+                onChange={(event) => handleNameChange(event.target.value)}
+                placeholder={sportType === "FOOTBALL" ? "e.g. Science Village Pitch / Hostel E Quad" : "e.g. Bakassi Basketball Court"}
                 maxLength={60}
                 required
               />
             </label>
 
             <label className="field">
-              <span>Area or community</span>
+              <span>Area or Campus Zone *</span>
               <input
                 value={area}
                 onChange={(event) => setArea(event.target.value)}
-                placeholder="e.g. Campus Central / Faculty of Arts"
+                placeholder="e.g. Block E Hostel / Campus Central / Faculty of Arts"
                 maxLength={60}
                 required
               />
             </label>
 
             <label className="field">
-              <span>Directions & landmarks</span>
+              <span>Walking Directions & Landmarks *</span>
               <input
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
-                placeholder="Behind the hostel library, take the stone path…"
+                placeholder="Directly opposite the female hostel gate, behind the library…"
                 maxLength={120}
                 required
               />
             </label>
 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <label className="field">
+                <span>Field / Court Surface</span>
+                <select value={fieldType} onChange={(event: any) => setFieldType(event.target.value)}>
+                  <option value="Street Arena">Street Arena (Concrete / Quad)</option>
+                  <option value="School Ground">School Ground (Open Field / Grass)</option>
+                  <option value="Paid Turf">Paid Synthetic Turf</option>
+                </select>
+              </label>
+
+              <label className="field">
+                <span>Price Bracket</span>
+                <select value={priceBracket} onChange={(event) => setPriceBracket(event.target.value)}>
+                  <option value="Free">Free (Public ground)</option>
+                  <option value="₦500 - ₦1,000 / set">₦500 - ₦1,000 / set</option>
+                  <option value="Paid Turf">Paid Commercial Turf</option>
+                </select>
+              </label>
+            </div>
+
             <label className="field">
-              <span>Current status</span>
+              <span>Initial ground status</span>
               <select value={status} onChange={(event) => setStatus(event.target.value)}>
                 <option value="DRY">Dry — ready for pickup</option>
                 <option value="BUILDING">Building sets — ballers pulling up</option>
@@ -272,9 +381,9 @@ export default function AddPitchPage() {
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Surface condition, lights, evening pickup hours, bring a ball…"
+                placeholder="Surface condition, lights, evening pickup hours, who to ask for ball…"
                 maxLength={240}
-                rows={3}
+                rows={2}
               />
             </label>
 
@@ -305,15 +414,15 @@ export default function AddPitchPage() {
             </div>
 
             <Notice tone="info" className="map-disclaimer">
-              This pins the ground to your active campus. Nearby ballers will be alerted on their feed.
+              This publishes the ground to {activeCampusObj?.name || "your campus"}. All students on this radar will see it immediately.
             </Notice>
 
             <AsyncButton type="submit" busy={busy} className="button--full button--green">
-              <Save size={16} /> Publish ground
+              <Save size={16} /> Publish ground to campus
             </AsyncButton>
           </form>
 
-          <div className="add-footnote">Synced directly with campus radar</div>
+          <div className="add-footnote">Synced directly with {activeCampusObj?.shortName || "campus"} ground radar</div>
         </>
       )}
     </AppFrame>

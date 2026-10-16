@@ -18,8 +18,8 @@ import { PitchDirectionsSection } from "@/components/pitch-directions";
 import { HowToUseModal } from "@/components/how-to-use-modal";
 import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
-import { checkinBall, createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, votePitch } from "@/lib/api";
-import { formatLobbyWhatsAppMessage, formatBallBeaconWhatsAppMessage, shareToWhatsApp } from "@/lib/share";
+import { checkinBall, createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, updatePitchStatus, votePitch } from "@/lib/api";
+import { formatLobbyWhatsAppMessage, formatBallBeaconWhatsAppMessage, formatPitchRallyWhatsAppMessage, shareToWhatsApp } from "@/lib/share";
 import { balanceSquad, formatBalancedSquadWhatsAppMessage } from "@/lib/balancer";
 import type { BanterMessage, Lobby, LobbyPlayer } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
@@ -183,7 +183,40 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
       await refreshPitch();
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : "Could not update ball status.");
-    } finally { setBallChecking(false); }
+    } finally {
+      setBallChecking(false);
+    }
+  }
+
+  async function handleUpdateGroundStatus(newStatus: "DRY" | "BUILDING" | "LIVE") {
+    if (!token) return setActionError("Log in before updating ground activity status.");
+    if (isDemo) return setActionError("Status updates are disabled in sample preview mode.");
+    setActionError(""); setActionNote("");
+    try {
+      await updatePitchStatus(id, newStatus);
+      const labels = {
+        LIVE: isBasketball ? "🏀 Court marked as LIVE! Teammates notified that games are on." : "⚽ Pitch marked as LIVE! Teammates notified that match is in play.",
+        BUILDING: isBasketball ? "👥 Court status updated to BUILDING. Call out ballers!" : "👥 Ground status updated to BUILDING. Pull up!",
+        DRY: "🛑 Ground marked as DRY / empty.",
+      };
+      setActionNote(labels[newStatus]);
+      await refreshPitch();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : "Could not update status.");
+    }
+  }
+
+  async function handleSharePitchRally() {
+    if (!pitch) return;
+    const msg = formatPitchRallyWhatsAppMessage({
+      pitchName: pitch.name,
+      pitchArea: pitch.area,
+      sportType: isBasketball ? "BASKETBALL" : "FOOTBALL",
+      activeStatus: pitch.activeStatus,
+      hasBall: pitch.hasBallNow,
+      pitchUrl: typeof window !== "undefined" ? window.location.href : `https://curbsport.vercel.app/pitches/${id}`,
+    });
+    await shareToWhatsApp(msg);
   }
 
   async function handleJoin(lobbyId: string) {
@@ -375,6 +408,27 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
             >
               <Navigation size={14} /> Get directions
             </a>
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => void handleSharePitchRally()}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 14px",
+                borderRadius: "9999px",
+                fontSize: "12px",
+                fontWeight: 700,
+                background: "rgba(37, 211, 102, 0.15)",
+                color: "#25D366",
+                border: "1px solid rgba(37, 211, 102, 0.35)",
+                cursor: "pointer",
+              }}
+              title="Broadcast pitch invite & status to your WhatsApp group"
+            >
+              <Share2 size={13} /> Rally Squad (WhatsApp)
+            </button>
             {pitch.hasBallNow ? (
               <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                 <span className="ball-confirmed-badge">
@@ -410,6 +464,99 @@ export default function PitchDetailPage({ params }: { params: { id: string } }) 
               </button>
             )}
           </div>
+        </div>
+      </section>
+
+      {/* 1-Tap Real-time Ground Pulse Bar */}
+      <section
+        style={{
+          background: "var(--surface-raised, #161a22)",
+          border: "1px solid var(--border-subtle, #30363d)",
+          borderRadius: "14px",
+          padding: "14px 16px",
+          margin: "12px 0 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+          <div>
+            <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", color: "var(--text-muted, #8b949e)", textTransform: "uppercase" }}>
+              ⚡ Ground Pulse • Who dey ground?
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "3px" }}>
+              <StatusBadge status={pitch.activeStatus} />
+              <span style={{ fontSize: "12px", color: "var(--text-secondary, #c9d1d9)" }}>
+                {pitch.activeStatus === "LIVE" ? "Game in play! People dey ground right now." : pitch.activeStatus === "BUILDING" ? "Players are gathering. Pull up to form sets." : "Ground is currently dry / quiet."}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => void handleUpdateGroundStatus("LIVE")}
+            style={{
+              flex: "1 1 auto",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              padding: "8px 12px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: 600,
+              border: pitch.activeStatus === "LIVE" ? "1px solid #238636" : "1px solid var(--border-subtle, #30363d)",
+              background: pitch.activeStatus === "LIVE" ? "rgba(35, 134, 54, 0.25)" : "var(--surface-overlay, #21262d)",
+              color: pitch.activeStatus === "LIVE" ? "#3fb950" : "var(--text-primary, #f0f6fc)",
+              cursor: "pointer",
+            }}
+          >
+            🟢 Mark LIVE (Game on)
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleUpdateGroundStatus("BUILDING")}
+            style={{
+              flex: "1 1 auto",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              padding: "8px 12px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: 600,
+              border: pitch.activeStatus === "BUILDING" ? "1px solid #d29922" : "1px solid var(--border-subtle, #30363d)",
+              background: pitch.activeStatus === "BUILDING" ? "rgba(210, 153, 34, 0.25)" : "var(--surface-overlay, #21262d)",
+              color: pitch.activeStatus === "BUILDING" ? "#e3b341" : "var(--text-primary, #f0f6fc)",
+              cursor: "pointer",
+            }}
+          >
+            🟡 Mark BUILDING (Gathering)
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleUpdateGroundStatus("DRY")}
+            style={{
+              flex: "1 1 auto",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              padding: "8px 12px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              fontWeight: 600,
+              border: pitch.activeStatus === "DRY" ? "1px solid #8b949e" : "1px solid var(--border-subtle, #30363d)",
+              background: pitch.activeStatus === "DRY" ? "rgba(139, 148, 158, 0.2)" : "var(--surface-overlay, #21262d)",
+              color: pitch.activeStatus === "DRY" ? "#c9d1d9" : "var(--text-muted, #8b949e)",
+              cursor: "pointer",
+            }}
+          >
+            ⚪ Mark DRY (Empty)
+          </button>
         </div>
       </section>
 

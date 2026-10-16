@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, House, MapPinned, Plus, UserRound, Bell } from "lucide-react";
+import { House, MapPinned, Plus, UserRound, Bell } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "@/components/brand";
 import { useSchoolId } from "@/hooks/use-school-id";
+import { CampusSelector } from "@/components/campus-selector";
 import { getSocket } from "@/lib/socket";
 
 const navigation = [
@@ -18,7 +19,7 @@ const navigation = [
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { schoolId, schoolName } = useSchoolId();
+  const { schoolId } = useSchoolId();
   const [n1p, setN1p] = useState<{ message: string; pitchId: number } | null>(null);
 
   useEffect(() => {
@@ -62,10 +63,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <Link href="/profile" className="city-pill" aria-label="Change your school in Profile">
-          <Compass size={14} />
-          <span>{schoolName.toUpperCase()}</span>
-        </Link>
+        <CampusSelector />
       </header>
       
       {n1p && (

@@ -18,7 +18,7 @@ import { PitchDirectionsSection } from "@/components/pitch-directions";
 import { HowToUseModal } from "@/components/how-to-use-modal";
 import { useBanter, useLobbies, usePitch } from "@/hooks/use-data";
 import { DEMO_BANTER, DEMO_LOBBIES, DEMO_PITCHES } from "@/lib/demo";
-import { checkinBall, createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, votePitch } from "@/lib/api";
+import { checkinBall, createLobby, getDirectionsUrl, joinLobby, leaveLobby, sendBanter, updatePitchImage, updatePitchStatus, votePitch } from "@/lib/api";
 import { formatLobbyWhatsAppMessage, formatBallBeaconWhatsAppMessage, shareToWhatsApp } from "@/lib/share";
 import { balanceSquad, formatBalancedSquadWhatsAppMessage } from "@/lib/balancer";
 import type { BanterMessage, Lobby, LobbyPlayer } from "@/lib/types";
