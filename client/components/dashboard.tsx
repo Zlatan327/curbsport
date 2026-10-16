@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowDownRight, ArrowUpRight, Check, Clock3, Footprints, MapPin, ShieldCheck, Users } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Check, Clock3, Crown, Footprints, MapPin, ShieldCheck, Users } from "lucide-react";
 import { campuses, demoPitches } from "@/lib/data";
 import { apiRequest, fetchCampusPitches, isApiConfigured, postDemoAware } from "@/lib/api";
 import type { FeedFilter, Pitch } from "@/lib/types";
@@ -64,7 +64,7 @@ export function Dashboard() {
   })), [liveGroundByPitch, liveSetsByPitch, sourcePitches]);
   const filtered = useMemo(() => {
     if (filter === "all") return pitches;
-    if (filter === "king") return pitches.filter((pitch) => pitch.king.reputation >= 85);
+    if (filter === "king") return pitches.filter((pitch) => pitch.king && pitch.king.reputation >= 85);
     return pitches.filter((pitch) => pitch.status === filter);
   }, [filter, pitches]);
   const selected = pitches.find((pitch) => pitch.id === selectedId) ?? pitches[0] ?? null;
@@ -123,11 +123,32 @@ export function Dashboard() {
         {filtered.map((pitch) => {
           const joinableSet = pitch.sets.find((set) => set.spotsOpen > 0);
           const featuredSet = joinableSet ?? pitch.sets[0];
+          const ballText = pitch.sport === "basketball" ? "Ball on court" : "Ball dey";
+          const ballNone = pitch.sport === "basketball" ? "Ball not confirmed" : "Ball not confirmed";
           return <article key={pitch.id} className={`pitch-card ${selected?.id === pitch.id ? "is-selected" : ""}`}>
             <div className="pitch-card-main"><div><div className="pitch-name-row"><h2 className="pitch-name">{pitch.name}</h2>{pitch.verified && <span className="verified-check" title="Community verified"><ShieldCheck size={12} /></span>}</div><div className="pitch-landmark">{pitch.landmark}</div></div><div className="pitch-status"><StatusPill status={pitch.status} /><span className="pitch-landmark">{pitch.surface}</span></div></div>
-            <div className="pitch-meta-row"><span className="pitch-meta-item"><span className={pitch.status === "live" ? "live-kicker-dot" : "filter-dot"} />{pitch.liveCount} playing</span><span className="pitch-meta-item">{pitch.ballPresent ? <><BallIcon size={13} />Ball dey · <strong>{pitch.ballBroughtBy ?? "confirmed"}</strong></> : <><BallIcon size={13} />Ball not confirmed</>}</span>{pitch.floodlights && <span className="pitch-meta-item">◌ Floodlights</span>}{featuredSet && <span className="pitch-meta-item"><Clock3 size={13} />Kickoff in <strong>{featuredSet.startsInMinutes} min</strong></span>}</div>
+            <div className="pitch-meta-row"><span className="pitch-meta-item"><span className={pitch.status === "live" ? "live-kicker-dot" : "filter-dot"} />{pitch.liveCount} playing</span><span className="pitch-meta-item">{pitch.ballPresent ? <><BallIcon size={13} sport={pitch.sport} />{ballText} · <strong>{pitch.ballBroughtBy ?? "confirmed"}</strong></> : <><BallIcon size={13} sport={pitch.sport} />{ballNone}</>}</span>{pitch.floodlights && <span className="pitch-meta-item">◌ Floodlights</span>}{featuredSet && <span className="pitch-meta-item"><Clock3 size={13} />{pitch.sport === "basketball" ? "Tip-off" : "Kickoff"} in <strong>{featuredSet.startsInMinutes} min</strong></span>}</div>
             {featuredSet && <div className="roster-avatars" aria-label={`${featuredSet.title} roster`}><div className="avatar-stack">{featuredSet.players.slice(0, 4).map((player) => <PlayerAvatar key={player.id} player={player} size="small" />)}</div><span className="roster-count"><strong>{featuredSet.title}</strong> · {featuredSet.players.length}/{featuredSet.spotsTotal} players · {featuredSet.spotsOpen} open</span></div>}
-            <div className="pitch-card-footer"><div className="king-mini"><PlayerAvatar player={pitch.king} size="small" /><span className="king-mini-copy"><strong>{pitch.king.alias}</strong><span>♛ King · REP {pitch.king.reputation}</span></span></div>{joinableSet ? <button type="button" className="text-action" title={`Join ${joinableSet.title}`} onClick={() => void handleJoin(pitch, joinableSet.id)}>Join set <ArrowUpRight size={13} /></button> : pitch.sets.length > 0 ? <span className="lobby-summary"><Footprints size={13} />All sets full</span> : <span className="lobby-summary"><Footprints size={13} />No set yet</span>}<Link href={`/pitches/${pitch.id}`} className="text-action" onClick={() => setSelectedId(pitch.id)}>Inspect <ArrowUpRight size={13} /></Link></div>
+            <div className="pitch-card-footer">
+              {pitch.king ? (
+                <div className="king-mini">
+                  <PlayerAvatar player={pitch.king} size="small" />
+                  <span className="king-mini-copy">
+                    <strong>{pitch.king.alias}</strong>
+                    <span>♛ King · REP {pitch.king.reputation}</span>
+                  </span>
+                </div>
+              ) : (
+                <div className="king-mini" style={{ opacity: 0.8 }}>
+                  <Crown size={14} style={{ color: "var(--amber)", marginRight: 4 }} />
+                  <span className="king-mini-copy">
+                    <strong>Open Crown</strong>
+                    <span>Claim court</span>
+                  </span>
+                </div>
+              )}
+              {joinableSet ? <button type="button" className="text-action" title={`Join ${joinableSet.title}`} onClick={() => void handleJoin(pitch, joinableSet.id)}>Join set <ArrowUpRight size={13} /></button> : pitch.sets.length > 0 ? <span className="lobby-summary"><Footprints size={13} />All sets full</span> : <span className="lobby-summary"><Footprints size={13} />No set yet</span>}<Link href={`/pitches/${pitch.id}`} className="text-action" onClick={() => setSelectedId(pitch.id)}>Inspect <ArrowUpRight size={13} /></Link>
+            </div>
           </article>;
         })}
         {filtered.length === 0 && <div className="empty-state">

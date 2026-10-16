@@ -101,22 +101,40 @@ export function PitchDetail({ pitch: initialPitch }: { pitch: Pitch }) {
 
     <section className="detail-hero">
       <div>
-        <div className="eyebrow"><span className="live-kicker-dot" />{pitch.campusId} · PITCH HEADQUARTERS</div>
+        <div className="eyebrow"><span className="live-kicker-dot" />{pitch.campusId} · {pitch.sport === "basketball" ? "BASKETBALL COURT HQ" : "PITCH HEADQUARTERS"}</div>
         <h1>{pitch.name}</h1>
         <p className="detail-hero-copy">{pitch.landmark} · {campus?.city ?? "Nigeria"}. Ground signals, active sets, match intel and community-verified conditions.</p>
         <div className="detail-hero-meta"><span className="fact-chip"><MapPin size={12} />{pitch.surface}</span><span className="fact-chip"><Clock3 size={12} />{pitch.condition}</span><span className="fact-chip"><Users size={12} />{pitch.liveCount} on ground</span>{pitch.verified && <span className="fact-chip"><ShieldCheck size={12} />Community verified</span>}</div>
       </div>
-      <div className="detail-hero-status"><StatusPill status={pitch.status} /><span className="status-pill">{pitch.floodlights ? "FLOODLIGHTS" : "DAYLIGHT"}</span><span className="status-pill">{pitch.ballPresent ? "BALL DEY GROUND" : "BALL UNCONFIRMED"}</span></div>
+      <div className="detail-hero-status"><StatusPill status={pitch.status} /><span className="status-pill">{pitch.floodlights ? "FLOODLIGHTS" : "DAYLIGHT"}</span><span className="status-pill">{pitch.ballPresent ? (pitch.sport === "basketball" ? "BALL ON COURT" : "BALL DEY GROUND") : "BALL UNCONFIRMED"}</span></div>
     </section>
 
     <div className="detail-grid">
       <div className="stack">
         <section className="panel" aria-labelledby="king-heading">
-          <div className="panel-head"><h2 id="king-heading">King of the ground</h2><span className="status-pill is-building"><Crown size={12} />CAMPUS CROWN</span></div>
-          <div className="panel-body"><div className="king-banner">
-            <span className="king-crown-mark"><Crown size={26} /></span>
-            <div><div className="king-title">Crown Leader · REP {pitch.king.reputation}</div><div className="king-name">{pitch.king.alias}</div><div className="king-campus">{pitch.king.position} · {pitch.campusId} · Verified Ground</div></div>
-          </div><p className="map-note" style={{ margin: "12px 2px 0" }}><ShieldCheck size={13} />Crown eligibility is determined by peer-verified match results at this ground.</p></div>
+          <div className="panel-head"><h2 id="king-heading">King of the ground</h2><span className="status-pill is-building"><Crown size={12} />{pitch.king ? "CAMPUS CROWN" : "OPEN CROWN"}</span></div>
+          <div className="panel-body">
+            {pitch.king ? (
+              <div className="king-banner">
+                <span className="king-crown-mark"><Crown size={26} /></span>
+                <div>
+                  <div className="king-title">Crown Leader · REP {pitch.king.reputation}</div>
+                  <div className="king-name">{pitch.king.alias}</div>
+                  <div className="king-campus">{pitch.king.position} · {pitch.campusId} · Verified Ground</div>
+                </div>
+              </div>
+            ) : (
+              <div className="king-banner" style={{ border: "1px dashed rgba(234, 179, 8, 0.4)", background: "rgba(234, 179, 8, 0.05)" }}>
+                <span className="king-crown-mark" style={{ color: "var(--amber)", background: "rgba(234, 179, 8, 0.15)" }}><Crown size={26} /></span>
+                <div>
+                  <div className="king-title" style={{ color: "var(--amber)" }}>Uncontested Crown</div>
+                  <div className="king-name">No Reigning King Yet</div>
+                  <div className="king-campus">Play and verify sets on this {pitch.sport === "basketball" ? "court" : "pitch"} to claim the crown!</div>
+                </div>
+              </div>
+            )}
+            <p className="map-note" style={{ margin: "12px 2px 0" }}><ShieldCheck size={13} />Crown eligibility is determined by peer-verified match results at this ground.</p>
+          </div>
         </section>
 
         <section className="panel" aria-labelledby="sets-heading">
@@ -139,7 +157,7 @@ export function PitchDetail({ pitch: initialPitch }: { pitch: Pitch }) {
       <aside className="stack">
         <PitchDirectionsSection pitch={pitch} />
         <section className="panel"><div className="panel-head"><h2>Ground conditions</h2><StatusPill status={pitch.status} /></div><div className="panel-body"><GroundFacts pitch={pitch} /><div className="divider" /><p className="soft-copy">{pitch.condition}. Community checks last refreshed {pitch.updatedMinutesAgo} minutes ago. Confirm surface and security access when you arrive.</p><Link href="/add" className="text-action">Update this ground <ArrowUpRight size={13} /></Link></div></section>
-        <section className="panel"><div className="panel-head"><h2>Pitch quick signals</h2><span className="eyebrow"><span className="live-kicker-dot" />{pitch.liveCount} nearby</span></div><div className="panel-body"><div className="beacon-row" style={{ paddingTop: 0, border: 0 }}><span className="beacon-copy"><span className="live-kicker-dot" />Ball dey ground</span><strong>{pitch.ballPresent ? pitch.ballBroughtBy : "Not confirmed"}</strong></div><div className="divider" /><div className="selected-ground-facts"><span className="fact-chip"><CheckCircle2 size={12} />{pitch.verified ? "Verified ground" : "Community pin"}</span><span className="fact-chip">{pitch.surface}</span></div><p className="map-note" style={{ marginBottom: 0 }}><MapPin size={13} />Sample peer results and crown stats are illustrative; confirm access and conditions on arrival.</p></div></section>
+        <section className="panel"><div className="panel-head"><h2>Pitch quick signals</h2><span className="eyebrow"><span className="live-kicker-dot" />{pitch.liveCount} nearby</span></div><div className="panel-body"><div className="beacon-row" style={{ paddingTop: 0, border: 0 }}><span className="beacon-copy"><span className="live-kicker-dot" />{pitch.sport === "basketball" ? "Ball on court" : "Ball dey ground"}</span><strong>{pitch.ballPresent ? (pitch.ballBroughtBy || "Confirmed") : "Not confirmed"}</strong></div><div className="divider" /><div className="selected-ground-facts"><span className="fact-chip"><CheckCircle2 size={12} />{pitch.verified ? "Verified ground" : "Community pin"}</span><span className="fact-chip">{pitch.surface}</span></div><p className="map-note" style={{ marginBottom: 0 }}><MapPin size={13} />Play or confirm matches to claim the crown and earn reputation.</p></div></section>
       </aside>
     </div>
 

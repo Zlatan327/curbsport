@@ -9,19 +9,46 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  Flame,
   LockKeyhole,
   LogOut,
   MapPin,
+  Shield,
   ShieldCheck,
   Sparkles,
   Trophy,
   UserRound,
   Loader2,
+  Target,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { fetchSchools, fetchUserStats, updateUserProfile } from "@/lib/api";
 import { useToast } from "@/components/toast";
 import { AuthModal } from "@/components/auth-modal";
+
+interface MatchStatsResponse {
+  userId?: number;
+  alias?: string;
+  reputationScore?: number;
+  totalMatches?: number;
+  football?: {
+    goals: number;
+    assists: number;
+    cleanSheets: number;
+    saves: number;
+    tackles: number;
+  };
+  basketball?: {
+    points: number;
+    rebounds: number;
+    steals: number;
+    blocks: number;
+    threePointers: number;
+  };
+  crowns?: number;
+  isCrownBanned?: boolean;
+  slashCount?: number;
+}
 
 export function ProfilePage() {
   const { user, token, setSession, logout, ready } = useAuthStore();
@@ -29,7 +56,7 @@ export function ProfilePage() {
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [schools, setSchools] = useState<{ id: number; name: string }[]>([]);
-  const [stats, setStats] = useState<Record<string, unknown> | null>(null);
+  const [stats, setStats] = useState<MatchStatsResponse | null>(null);
 
   // Form states
   const [heightUnit, setHeightUnit] = useState<"cm" | "ft">("cm");
@@ -44,11 +71,23 @@ export function ProfilePage() {
   const [medicalInfo, setMedicalInfo] = useState(user?.medicalInfo || "");
   const [schoolId, setSchoolId] = useState<number>(user?.schoolId || 9);
   const [primarySport, setPrimarySport] = useState<string>(user?.primarySport || "FOOTBALL");
+  const [footballPosition, setFootballPosition] = useState<string>(
+    user?.footballPosition || "MIDFIELDER"
+  );
+  const [basketballPosition, setBasketballPosition] = useState<string>(
+    user?.basketballPosition || "GUARD"
+  );
   const [hasBall, setHasBall] = useState<boolean>(Boolean(user?.hasBall));
   const [ballType, setBallType] = useState<string>(user?.ballType || "");
 
+  // Stats display tab
+  const [statsSport, setStatsSport] = useState<"FOOTBALL" | "BASKETBALL">(
+    (user?.primarySport as "FOOTBALL" | "BASKETBALL") || "FOOTBALL"
+  );
+
   // Avatar & Saving state
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || null);
+  const [avatarError, setAvatarError] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingBio, setSavingBio] = useState(false);
   const [savingSchool, setSavingSchool] = useState(false);
@@ -57,7 +96,10 @@ export function ProfilePage() {
   // Sync state whenever store user changes
   useEffect(() => {
     if (user) {
-      if (user.avatarUrl) setAvatarPreview(user.avatarUrl);
+      if (user.avatarUrl) {
+        setAvatarPreview(user.avatarUrl);
+        setAvatarError(false);
+      }
       if (user.heightCm) {
         setHeightCm(String(user.heightCm));
         setHeightFeet(String(Math.floor(user.heightCm / 30.48)));
@@ -66,7 +108,12 @@ export function ProfilePage() {
       if (user.weightKg) setWeightKg(String(user.weightKg));
       if (user.medicalInfo) setMedicalInfo(user.medicalInfo);
       if (user.schoolId) setSchoolId(user.schoolId);
-      if (user.primarySport) setPrimarySport(user.primarySport);
+      if (user.primarySport) {
+        setPrimarySport(user.primarySport);
+        setStatsSport(user.primarySport as "FOOTBALL" | "BASKETBALL");
+      }
+      if (user.footballPosition) setFootballPosition(user.footballPosition);
+      if (user.basketballPosition) setBasketballPosition(user.basketballPosition);
       setHasBall(Boolean(user.hasBall));
       if (user.ballType) setBallType(user.ballType);
     }
@@ -76,7 +123,9 @@ export function ProfilePage() {
   useEffect(() => {
     fetchSchools().then(setSchools).catch(() => {});
     if (user?.id) {
-      fetchUserStats(user.id).then(setStats).catch(() => {});
+      fetchUserStats(user.id)
+        .then((data) => setStats(data as MatchStatsResponse))
+        .catch(() => {});
     }
   }, [user?.id]);
 
@@ -119,6 +168,7 @@ export function ProfilePage() {
           ctx.drawImage(img, 0, 0, width, height);
           const compressed = canvas.toDataURL("image/jpeg", 0.82);
           setAvatarPreview(compressed);
+          setAvatarError(false);
 
           if (token && user) {
             try {
@@ -182,9 +232,11 @@ export function ProfilePage() {
         hasBall,
         ballType: hasBall ? ballType.trim() : undefined,
         primarySport: (primarySport as "FOOTBALL" | "BASKETBALL") || "FOOTBALL",
+        footballPosition: (footballPosition as "GOALKEEPER" | "DEFENDER" | "MIDFIELDER" | "FORWARD") || "MIDFIELDER",
+        basketballPosition: (basketballPosition as "GUARD" | "FORWARD" | "CENTER") || "GUARD",
       });
       setSession(token, { ...user, ...res.user });
-      showToast("Player card updated", "Your locker changes were saved to the server.", "success");
+      showToast("Player card updated", "Your sport, position, and locker details were saved.", "success");
     } catch (err) {
       showToast("Could not save details", err instanceof Error ? err.message : "Server error", "error");
     } finally {
@@ -210,8 +262,31 @@ export function ProfilePage() {
     }
   };
 
-  // Not signed in state
-  if (ready && (!token || !user)) {
+  // 1. Loading / Hydrating state (when token exists but user profile is syncing from server)
+  if (!ready || (token && !user)) {
+    return (
+      <main className="page-content">
+        <div className="page-header">
+          <div className="page-header-copy">
+            <div className="breadcrumb">
+              <Link href="/">Radar</Link>
+              <span>/</span>
+              <span>Locker room</span>
+            </div>
+            <h1 className="page-title">Player Locker</h1>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 340, gap: 14 }}>
+          <Loader2 size={32} className="animate-spin text-[#00FF66]" />
+          <p className="soft-copy">Syncing player profile & peer records…</p>
+        </div>
+        <ToastViewport />
+      </main>
+    );
+  }
+
+  // 2. Unauthenticated state (ready and genuinely no token)
+  if (ready && !token) {
     return (
       <main className="page-content">
         <div className="page-header">
@@ -261,6 +336,22 @@ export function ProfilePage() {
   const reputation = user?.reputationScore ?? 50;
   const tier = reputation >= 90 ? "Campus Legend" : reputation >= 70 ? "Baller" : "Rookie";
 
+  // Position labels and signature metric calculations
+  const isBasketball = primarySport === "BASKETBALL";
+  const userPositionLabel = isBasketball
+    ? basketballPosition === "GUARD"
+      ? "Guard (Point / Shooting)"
+      : basketballPosition === "CENTER"
+      ? "Center (Rim Protector)"
+      : "Forward (Wing / Slasher)"
+    : footballPosition === "GOALKEEPER"
+    ? "Goalkeeper (Shot Stopper)"
+    : footballPosition === "DEFENDER"
+    ? "Defender (Back Line)"
+    : footballPosition === "FORWARD"
+    ? "Forward (Striker / Winger)"
+    : "Midfielder (Maestro)";
+
   return (
     <main className="page-content">
       <div className="page-header">
@@ -296,10 +387,11 @@ export function ProfilePage() {
               <div className="player-identity">
                 {/* Profile Picture with Upload Overlay */}
                 <div style={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
-                  {avatarPreview ? (
+                  {avatarPreview && !avatarError ? (
                     <img
                       src={avatarPreview}
                       alt={user?.alias || "Player"}
+                      onError={() => setAvatarError(true)}
                       style={{
                         width: 72,
                         height: 72,
@@ -384,7 +476,7 @@ export function ProfilePage() {
                         letterSpacing: "0.04em",
                       }}
                     >
-                      <span>⚽ BALL OWNER</span>
+                      <span>{isBasketball ? "🏀 BALL OWNER" : "⚽ BALL OWNER"}</span>
                       {user.ballType && <span>• {user.ballType}</span>}
                     </div>
                   )}
@@ -406,18 +498,29 @@ export function ProfilePage() {
               <strong className={tier === "Campus Legend" ? "text-[#00FF66]" : ""}>CAMPUS LEGEND</strong>
             </div>
 
+            {/* Position-Aware Player Facts */}
             <div className="player-facts">
               <div className="player-fact">
-                <span>Primary sport</span>
-                <strong>{user?.primarySport === "BASKETBALL" ? "🏀 Basketball" : "⚽ Football"}</strong>
+                <span>Role & position</span>
+                <strong>{userPositionLabel}</strong>
               </div>
               <div className="player-fact">
                 <span>Matches played</span>
-                <strong>{user?.matchesPlayed ?? (stats?.matchesPlayed as number) ?? 0} matches</strong>
+                <strong>{stats?.totalMatches ?? user?.matchesPlayed ?? 0} games</strong>
               </div>
               <div className="player-fact">
-                <span>Goals / points</span>
-                <strong>{user?.goalsScored ?? (stats?.goals as number) ?? 0}</strong>
+                <span>Signature stat</span>
+                <strong>
+                  {isBasketball
+                    ? `${stats?.basketball?.points ?? 0} PTS · ${stats?.basketball?.rebounds ?? 0} REB`
+                    : footballPosition === "GOALKEEPER"
+                    ? `${stats?.football?.saves ?? 0} saves · ${stats?.football?.cleanSheets ?? 0} CS`
+                    : footballPosition === "DEFENDER"
+                    ? `${stats?.football?.tackles ?? 0} tackles · ${stats?.football?.cleanSheets ?? 0} CS`
+                    : footballPosition === "MIDFIELDER"
+                    ? `${stats?.football?.assists ?? 0} AST · ${stats?.football?.goals ?? user?.goalsScored ?? 0} G`
+                    : `${stats?.football?.goals ?? user?.goalsScored ?? 0} goals · ${stats?.football?.assists ?? 0} AST`}
+                </strong>
               </div>
               <div className="player-fact">
                 <span>Verification</span>
@@ -464,16 +567,65 @@ export function ProfilePage() {
             </div>
           </section>
 
-          {/* Biometrics & Equipment */}
+          {/* Locker Details, Sport & Positions */}
           <section className="panel" aria-labelledby="biometrics-heading">
             <div className="panel-head">
-              <h2 id="biometrics-heading">Locker Details & Equipment</h2>
+              <h2 id="biometrics-heading">Locker Details, Sport & Positions</h2>
               <span className="status-pill">
                 <LockKeyhole size={12} /> PRIVATE
               </span>
             </div>
             <div className="panel-body">
               <form className="form-grid" onSubmit={saveBiometrics}>
+                {/* Primary Sport Selector */}
+                <div className="field">
+                  <label htmlFor="primary-sport-select">Primary Sport</label>
+                  <select
+                    id="primary-sport-select"
+                    className="input"
+                    value={primarySport}
+                    onChange={(e) => {
+                      const sp = e.target.value;
+                      setPrimarySport(sp);
+                      setStatsSport(sp as "FOOTBALL" | "BASKETBALL");
+                    }}
+                  >
+                    <option value="FOOTBALL">⚽ Football (Soccer)</option>
+                    <option value="BASKETBALL">🏀 Basketball</option>
+                  </select>
+                </div>
+
+                {/* Football Position */}
+                <div className="field">
+                  <label htmlFor="fb-position-select">Football Position</label>
+                  <select
+                    id="fb-position-select"
+                    className="input"
+                    value={footballPosition}
+                    onChange={(e) => setFootballPosition(e.target.value)}
+                  >
+                    <option value="FORWARD">Forward / Striker / Winger</option>
+                    <option value="MIDFIELDER">Midfielder / Maestro</option>
+                    <option value="DEFENDER">Defender / Centre Back</option>
+                    <option value="GOALKEEPER">Goalkeeper / Shot Stopper</option>
+                  </select>
+                </div>
+
+                {/* Basketball Position */}
+                <div className="field">
+                  <label htmlFor="bb-position-select">Basketball Position</label>
+                  <select
+                    id="bb-position-select"
+                    className="input"
+                    value={basketballPosition}
+                    onChange={(e) => setBasketballPosition(e.target.value)}
+                  >
+                    <option value="GUARD">Guard (PG / SG · Floor General)</option>
+                    <option value="FORWARD">Forward (SF / PF · Slasher)</option>
+                    <option value="CENTER">Center (C · Big Man / Rim Protector)</option>
+                  </select>
+                </div>
+
                 {/* Height */}
                 <div className="field">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -574,7 +726,7 @@ export function ProfilePage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <strong style={{ color: hasBall ? "#fde047" : "#fff", fontSize: "0.9rem" }}>
-                        ⚽ Ball Owner Status (VIP Chairman)
+                        {isBasketball ? "🏀 Basketball Owner Status" : "⚽ Match Ball Owner Status (VIP)"}
                       </strong>
                       <p className="soft-copy" style={{ margin: "2px 0 0", fontSize: "0.75rem" }}>
                         Own a match ball? Ball owners get priority lobby starter slots and +10 REP on equipment check-ins.
@@ -628,38 +780,238 @@ export function ProfilePage() {
           </section>
         </div>
 
-        {/* Real Stats & Match History Panel */}
+        {/* Dynamic, Position-Aware Performance & Ground Record */}
         <section className="panel" aria-labelledby="history-heading">
           <div className="panel-head">
             <h2 id="history-heading">Performance & Ground Record</h2>
-            <span className="status-pill is-live">
-              <ShieldCheck size={12} /> PEER RECORD
-            </span>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => setStatsSport("FOOTBALL")}
+                style={{
+                  fontSize: "0.72rem",
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  fontWeight: 700,
+                  background: statsSport === "FOOTBALL" ? "#00FF66" : "#222",
+                  color: statsSport === "FOOTBALL" ? "#000" : "#888",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                ⚽ FOOTBALL
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatsSport("BASKETBALL")}
+                style={{
+                  fontSize: "0.72rem",
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  fontWeight: 700,
+                  background: statsSport === "BASKETBALL" ? "#00FF66" : "#222",
+                  color: statsSport === "BASKETBALL" ? "#000" : "#888",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                🏀 BASKETBALL
+              </button>
+            </div>
           </div>
           <div className="panel-body">
-            <div className="radar-stats" style={{ marginTop: 0 }}>
-              <div className="radar-stat">
-                <div className="radar-stat-top">
-                  <span>MATCHES</span>
-                  <Trophy size={13} />
+            {statsSport === "BASKETBALL" ? (
+              // BASKETBALL STATS (Points, Rebounds, Steals, Blocks, 3-Pointers)
+              <>
+                <div className="radar-stats" style={{ marginTop: 0 }}>
+                  <div className="radar-stat">
+                    <div className="radar-stat-top">
+                      <span>POINTS</span>
+                      <Target size={13} />
+                    </div>
+                    <div className="radar-stat-value is-live">{stats?.basketball?.points ?? 0}</div>
+                  </div>
+                  <div className="radar-stat">
+                    <div className="radar-stat-top">
+                      <span>{basketballPosition === "GUARD" ? "3-POINTERS" : "REBOUNDS"}</span>
+                      <Flame size={13} />
+                    </div>
+                    <div className="radar-stat-value">
+                      {basketballPosition === "GUARD"
+                        ? stats?.basketball?.threePointers ?? 0
+                        : stats?.basketball?.rebounds ?? 0}
+                    </div>
+                  </div>
+                  <div className="radar-stat">
+                    <div className="radar-stat-top">
+                      <span>{basketballPosition === "CENTER" ? "BLOCKS" : "STEALS"}</span>
+                      <Shield size={13} />
+                    </div>
+                    <div className="radar-stat-value">
+                      {basketballPosition === "CENTER"
+                        ? stats?.basketball?.blocks ?? 0
+                        : stats?.basketball?.steals ?? 0}
+                    </div>
+                  </div>
                 </div>
-                <div className="radar-stat-value">{user?.matchesPlayed ?? (stats?.matchesPlayed as number) ?? 0}</div>
-              </div>
-              <div className="radar-stat">
-                <div className="radar-stat-top">
-                  <span>GOALS</span>
-                  <CheckCircle2 size={13} />
+
+                {/* Complete Basketball Box-Score Metrics */}
+                <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>TOTAL GAMES</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.totalMatches ?? 0}</strong>
+                  </div>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>3-POINTERS</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.basketball?.threePointers ?? 0}</strong>
+                  </div>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>REBOUNDS</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.basketball?.rebounds ?? 0}</strong>
+                  </div>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>STEALS</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.basketball?.steals ?? 0}</strong>
+                  </div>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>BLOCKS</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.basketball?.blocks ?? 0}</strong>
+                  </div>
                 </div>
-                <div className="radar-stat-value is-live">{user?.goalsScored ?? (stats?.goals as number) ?? 0}</div>
-              </div>
-              <div className="radar-stat">
-                <div className="radar-stat-top">
-                  <span>MOTM</span>
-                  <Sparkles size={13} />
+              </>
+            ) : (
+              // FOOTBALL STATS (Tailored to Goalkeeper, Defender, Midfielder, Forward)
+              <>
+                <div className="radar-stats" style={{ marginTop: 0 }}>
+                  {footballPosition === "GOALKEEPER" ? (
+                    <>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>SAVES</span>
+                          <Shield size={13} />
+                        </div>
+                        <div className="radar-stat-value is-live">{stats?.football?.saves ?? 0}</div>
+                      </div>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>CLEAN SHEETS</span>
+                          <CheckCircle2 size={13} />
+                        </div>
+                        <div className="radar-stat-value">{stats?.football?.cleanSheets ?? 0}</div>
+                      </div>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>MOTM</span>
+                          <Sparkles size={13} />
+                        </div>
+                        <div className="radar-stat-value">{user?.manOfTheMatch ?? 0}</div>
+                      </div>
+                    </>
+                  ) : footballPosition === "DEFENDER" ? (
+                    <>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>TACKLES</span>
+                          <Shield size={13} />
+                        </div>
+                        <div className="radar-stat-value is-live">{stats?.football?.tackles ?? 0}</div>
+                      </div>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>CLEAN SHEETS</span>
+                          <CheckCircle2 size={13} />
+                        </div>
+                        <div className="radar-stat-value">{stats?.football?.cleanSheets ?? 0}</div>
+                      </div>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>MOTM</span>
+                          <Sparkles size={13} />
+                        </div>
+                        <div className="radar-stat-value">{user?.manOfTheMatch ?? 0}</div>
+                      </div>
+                    </>
+                  ) : footballPosition === "MIDFIELDER" ? (
+                    <>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>ASSISTS</span>
+                          <Sparkles size={13} />
+                        </div>
+                        <div className="radar-stat-value is-live">{stats?.football?.assists ?? 0}</div>
+                      </div>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>GOALS</span>
+                          <CheckCircle2 size={13} />
+                        </div>
+                        <div className="radar-stat-value">{stats?.football?.goals ?? user?.goalsScored ?? 0}</div>
+                      </div>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>TACKLES</span>
+                          <Shield size={13} />
+                        </div>
+                        <div className="radar-stat-value">{stats?.football?.tackles ?? 0}</div>
+                      </div>
+                    </>
+                  ) : (
+                    // FORWARD
+                    <>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>GOALS</span>
+                          <CheckCircle2 size={13} />
+                        </div>
+                        <div className="radar-stat-value is-live">{stats?.football?.goals ?? user?.goalsScored ?? 0}</div>
+                      </div>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>ASSISTS</span>
+                          <Sparkles size={13} />
+                        </div>
+                        <div className="radar-stat-value">{stats?.football?.assists ?? 0}</div>
+                      </div>
+                      <div className="radar-stat">
+                        <div className="radar-stat-top">
+                          <span>MOTM</span>
+                          <Trophy size={13} />
+                        </div>
+                        <div className="radar-stat-value">{user?.manOfTheMatch ?? 0}</div>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="radar-stat-value">{user?.manOfTheMatch ?? (stats?.manOfTheMatch as number) ?? 0}</div>
-              </div>
-            </div>
+
+                {/* Complete Football Box-Score Metrics */}
+                <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>TOTAL MATCHES</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.totalMatches ?? user?.matchesPlayed ?? 0}</strong>
+                  </div>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>GOALS</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.football?.goals ?? user?.goalsScored ?? 0}</strong>
+                  </div>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>ASSISTS</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.football?.assists ?? 0}</strong>
+                  </div>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>CLEAN SHEETS</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.football?.cleanSheets ?? 0}</strong>
+                  </div>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>TACKLES</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.football?.tackles ?? 0}</strong>
+                  </div>
+                  <div style={{ background: "#151815", padding: "8px 12px", borderRadius: 6, border: "1px solid #232823" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#888", display: "block" }}>SAVES</span>
+                    <strong style={{ fontSize: "1.1rem" }}>{stats?.football?.saves ?? 0}</strong>
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="divider" style={{ margin: "20px 0" }} />
 

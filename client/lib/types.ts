@@ -88,7 +88,7 @@ export interface Pitch {
   ballPresent: boolean;
   ballBroughtBy?: string;
   coordinates: { x: number; y: number };
-  king: Player;
+  king: Player | null;
   sets: SetLobby[];
   condition: string;
   updatedMinutesAgo: number;

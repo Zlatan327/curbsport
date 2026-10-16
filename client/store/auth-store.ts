@@ -6,6 +6,9 @@ export const LEGACY_TOKEN_KEY = "inside-life-token";
 export const CURRENT_USER_KEY = "curbsport-user";
 export const LEGACY_USER_KEY = "inside-life-user";
 
+export const TOKEN_KEYS = ["curbsport-token", "inside-life-token", "token", "auth_token", "jwt", "curbsport_token"] as const;
+export const USER_KEYS = ["curbsport-user", "inside-life-user", "user", "authUser", "curbsport_user"] as const;
+
 interface AuthState {
   token: string | null;
   user: AuthUser | null;
@@ -19,7 +22,11 @@ interface AuthState {
 export function readStoredToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.localStorage.getItem(CURRENT_TOKEN_KEY) || window.localStorage.getItem(LEGACY_TOKEN_KEY);
+    for (const key of TOKEN_KEYS) {
+      const val = window.localStorage.getItem(key);
+      if (val && val.trim().length > 0) return val.trim();
+    }
+    return null;
   } catch {
     return null;
   }
@@ -28,8 +35,18 @@ export function readStoredToken(): string | null {
 export function readStoredUser(): AuthUser | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(CURRENT_USER_KEY) || window.localStorage.getItem(LEGACY_USER_KEY);
-    return raw ? (JSON.parse(raw) as AuthUser) : null;
+    for (const key of USER_KEYS) {
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object" && (parsed.id || parsed.alias)) {
+            return parsed as AuthUser;
+          }
+        } catch {}
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -44,14 +61,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   initialize: () => {
     if (typeof window === "undefined") return;
     try {
-      const currentToken = window.localStorage.getItem(CURRENT_TOKEN_KEY);
-      const legacyToken = window.localStorage.getItem(LEGACY_TOKEN_KEY);
-      const token = currentToken || legacyToken;
+      const token = readStoredToken();
       const user = readStoredUser();
 
-      if (!currentToken && legacyToken) {
-        window.localStorage.setItem(CURRENT_TOKEN_KEY, legacyToken);
-      }
       set({ token, user, ready: true });
 
       if (token) {
@@ -62,7 +74,9 @@ export const useAuthStore = create<AuthState>((set) => ({
                 window.localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(freshUser));
                 window.localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(freshUser));
               } catch {}
-              set({ user: freshUser });
+              set((state) => ({
+                user: state.user ? { ...state.user, ...freshUser } : freshUser,
+              }));
             }
           })
           .catch(() => {});
@@ -101,10 +115,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         window.localStorage.setItem(CURRENT_TOKEN_KEY, token);
         window.localStorage.setItem(LEGACY_TOKEN_KEY, token);
       } else {
-        window.localStorage.removeItem(CURRENT_TOKEN_KEY);
-        window.localStorage.removeItem(LEGACY_TOKEN_KEY);
-        window.localStorage.removeItem(CURRENT_USER_KEY);
-        window.localStorage.removeItem(LEGACY_USER_KEY);
+        TOKEN_KEYS.forEach((k) => { try { window.localStorage.removeItem(k); } catch {} });
+        USER_KEYS.forEach((k) => { try { window.localStorage.removeItem(k); } catch {} });
       }
     } catch {
       // In-memory fallback
@@ -116,10 +128,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   logout: () => {
     try {
-      window.localStorage.removeItem(CURRENT_TOKEN_KEY);
-      window.localStorage.removeItem(LEGACY_TOKEN_KEY);
-      window.localStorage.removeItem(CURRENT_USER_KEY);
-      window.localStorage.removeItem(LEGACY_USER_KEY);
+      TOKEN_KEYS.forEach((k) => { try { window.localStorage.removeItem(k); } catch {} });
+      USER_KEYS.forEach((k) => { try { window.localStorage.removeItem(k); } catch {} });
     } catch {
       // In-memory fallback
     }

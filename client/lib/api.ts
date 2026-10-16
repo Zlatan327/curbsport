@@ -1,6 +1,5 @@
-import type { AuthUser, Pitch, PitchDirection, Player, SetLobby, Sport, Surface, PitchStatus } from "@/lib/types";
+import type { AuthUser, Pitch, PitchDirection, Player, PlayerPosition, SetLobby, Sport, Surface, PitchStatus } from "@/lib/types";
 import { readStoredToken } from "@/store/auth-store";
-import { demoPitches } from "@/lib/data";
 
 export class ApiUnavailableError extends Error {
   constructor(message = "The Curbsport API is not configured.") {
@@ -155,16 +154,30 @@ export function normalizeServerPitch(raw: Record<string, unknown>, fallbackCampu
 
   const landmark = String(raw.landmarkDescription || raw.address || "Campus grounds, Nigeria");
 
-  const sampleKing = demoPitches.find((p) => p.campusId === fallbackCampusId && p.sport === sport)?.king || {
-    id: `king-${id}`,
-    alias: typeof raw.ballBroughtBy === "string" && raw.ballBroughtBy.trim() ? raw.ballBroughtBy : "Campus Star",
-    campusId: fallbackCampusId,
-    primarySport: sport,
-    position: (sport === "football" ? "FWD" : "PG") as Player["position"],
-    reputation: 92,
-    avatarColor: "#00ff66",
-    tier: "Campus Legend" as const,
-  };
+  // Resolve reigning king strictly from verified database records
+  let king: Player | null = null;
+  if (raw.king && isRecord(raw.king) && typeof raw.king.alias === "string") {
+    const rawKingSport = (raw.king.primarySport === "BASKETBALL" ? "basketball" : "football") as Sport;
+    const rawPos = (
+      sport === "basketball"
+        ? (raw.king.basketballPosition || "PG")
+        : (raw.king.footballPosition || "FWD")
+    ) as PlayerPosition;
+    king = {
+      id: String(raw.king.id || `king-${id}`),
+      alias: String(raw.king.alias),
+      campusId: fallbackCampusId,
+      primarySport: rawKingSport,
+      position: rawPos,
+      reputation: Number(raw.king.reputationScore || 90),
+      avatarColor: "#00ff66",
+      avatarUrl: typeof raw.king.avatarUrl === "string" ? raw.king.avatarUrl : null,
+      tier: "Campus Legend",
+    };
+  }
+
+  const ballStatusCopy = isBball ? "Ball on court" : "Ball dey ground";
+  const inProgressCopy = isBball ? "Live run in progress" : "Live match in progress";
 
   return {
     id,
@@ -176,13 +189,13 @@ export function normalizeServerPitch(raw: Record<string, unknown>, fallbackCampu
     surface,
     floodlights: Boolean(raw.floodlights) || nameLower.includes("indoor") || nameLower.includes("complex"),
     status,
-    liveCount: Number(raw.playersNow || (status === "live" ? 12 : status === "building" ? 5 : 0)),
+    liveCount: Number(raw.playersNow || (status === "live" ? 10 : status === "building" ? 4 : 0)),
     ballPresent: Boolean(raw.hasBallNow),
     ballBroughtBy: raw.ballBroughtBy ? String(raw.ballBroughtBy) : undefined,
     coordinates: coords,
-    king: sampleKing,
-    sets: demoPitches.find((p) => p.id === id)?.sets || [],
-    condition: status === "live" ? "Live match in progress" : raw.hasBallNow ? "Ball dey ground" : "Dry ground",
+    king,
+    sets: [],
+    condition: status === "live" ? inProgressCopy : raw.hasBallNow ? ballStatusCopy : "Dry court",
     updatedMinutesAgo: 3,
     latitude: lat,
     longitude: lng,
@@ -195,16 +208,14 @@ export async function fetchCampusPitches(campusId: string, sport: Sport): Promis
   try {
     const res = await apiRequest<{ pitches?: unknown[] }>(`/pitches?schoolId=${schoolId}`);
     const rawList = Array.isArray(res) ? res : Array.isArray(res?.pitches) ? res.pitches : [];
-    if (rawList.length > 0) {
-      return rawList
-        .filter((raw): raw is Record<string, unknown> => isRecord(raw))
-        .map((raw) => normalizeServerPitch(raw, campusId))
-        .filter((p) => p.sport === sport);
-    }
+    return rawList
+      .filter((raw): raw is Record<string, unknown> => isRecord(raw))
+      .map((raw) => normalizeServerPitch(raw, campusId))
+      .filter((p) => p.sport === sport);
   } catch (err) {
-    console.warn("Live API fetch error, falling back to local campus catalog:", err);
+    console.warn("Live API fetch error:", err);
+    return [];
   }
-  return demoPitches.filter((p) => p.campusId === campusId && p.sport === sport);
 }
 
 export async function fetchPitch(id: string): Promise<Pitch> {
@@ -216,12 +227,29 @@ export async function fetchPitch(id: string): Promise<Pitch> {
         return normalizeServerPitch(res.pitch);
       }
     } catch {
-      // Fall through to fixture
+      // Continue to search by slug
     }
   }
-  const fixture = demoPitches.find((p) => p.id === id);
-  if (fixture) return fixture;
-  throw new Error(`Pitch “${id}” not found.`);
+
+  // Search across campus pitches for slug match
+  for (const [campus, schoolId] of Object.entries(CAMPUS_TO_SCHOOL_ID)) {
+    try {
+      const res = await apiRequest<{ pitches?: unknown[] }>(`/pitches?schoolId=${schoolId}`);
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.pitches) ? res.pitches : [];
+      for (const item of rawList) {
+        if (isRecord(item)) {
+          const norm = normalizeServerPitch(item, campus);
+          const slug = norm.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+          if (norm.id === id || slug.includes(id) || id.includes(slug)) {
+            return norm;
+          }
+        }
+      }
+    } catch {
+      // Continue search
+    }
+  }
+  throw new Error(`Ground “${id}” not found.`);
 }
 
 export async function fetchPitchDirections(pitchId: string | number): Promise<PitchDirection[]> {
