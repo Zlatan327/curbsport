@@ -46,6 +46,22 @@ export function AppFrame({ children }: { children: ReactNode }) {
     <div className="app-frame">
       <header className="topbar">
         <Brand />
+        <nav className="desktop-nav" aria-label="Desktop navigation">
+          {navigation.map(({ href, label, icon: Icon, accent }) => {
+            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`desktop-nav__link${active ? " is-active" : ""}${accent ? " desktop-nav__link--add" : ""}`}
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon size={15} />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
         <Link href="/profile" className="city-pill" aria-label="Change your school in Profile">
           <Compass size={14} />
           <span>{schoolName.toUpperCase()}</span>

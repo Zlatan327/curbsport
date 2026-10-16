@@ -63,7 +63,7 @@ export default function FeedPage() {
         <div className="feed-ticker">
           <div className="feed-ticker__status">
             <span className="feed-ticker__dot" />
-            <span>{liveCount > 0 ? `${liveCount} games live right now` : "Checking campus grounds"}</span>
+            <span>{liveCount > 0 ? `${liveCount} games live right now` : "No active runs right now • Pick a ground to pull up"}</span>
           </div>
           <button
             type="button"
@@ -104,46 +104,48 @@ export default function FeedPage() {
           <Link href="/add" className="text-link">Add ground</Link>
         </div>
 
-        {/* Sport Noise Filter Segmented Control */}
-        <div className="sport-filter-bar" role="tablist" aria-label="Filter by sport">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={sportFilter === "FOOTBALL"}
-            className={`sport-filter-btn${sportFilter === "FOOTBALL" ? " is-active-football" : ""}`}
-            onClick={() => setSportFilter("FOOTBALL")}
-          >
-            ⚽ Football
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={sportFilter === "BASKETBALL"}
-            className={`sport-filter-btn${sportFilter === "BASKETBALL" ? " is-active-basketball" : ""}`}
-            onClick={() => setSportFilter("BASKETBALL")}
-          >
-            🏀 Basketball
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={sportFilter === "ALL"}
-            className={`sport-filter-btn${sportFilter === "ALL" ? " is-active-all" : ""}`}
-            onClick={() => setSportFilter("ALL")}
-          >
-            All grounds
-          </button>
-        </div>
+        <div className="feed-controls-row">
+          {/* Sport Noise Filter Segmented Control */}
+          <div className="sport-filter-bar" role="tablist" aria-label="Filter by sport">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sportFilter === "FOOTBALL"}
+              className={`sport-filter-btn${sportFilter === "FOOTBALL" ? " is-active-football" : ""}`}
+              onClick={() => setSportFilter("FOOTBALL")}
+            >
+              ⚽ Football
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sportFilter === "BASKETBALL"}
+              className={`sport-filter-btn${sportFilter === "BASKETBALL" ? " is-active-basketball" : ""}`}
+              onClick={() => setSportFilter("BASKETBALL")}
+            >
+              🏀 Basketball
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={sportFilter === "ALL"}
+              className={`sport-filter-btn${sportFilter === "ALL" ? " is-active-all" : ""}`}
+              onClick={() => setSportFilter("ALL")}
+            >
+              All grounds
+            </button>
+          </div>
 
-        <label className="search-box">
-          <Search size={17} />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={sportFilter === "BASKETBALL" ? "Search basketball courts..." : "Search pitches and fields..."}
-            aria-label="Search pitches"
-          />
-        </label>
+          <label className="search-box">
+            <Search size={17} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={sportFilter === "BASKETBALL" ? "Search basketball courts..." : "Search pitches and fields..."}
+              aria-label="Search pitches"
+            />
+          </label>
+        </div>
 
         {isLoading && !data && <div className="feed-loading"><LoadingState label="Checking the ground..." /><div className="skeleton-card" /><div className="skeleton-card" /></div>}
         {!isLoading && visiblePitches.length === 0 && (

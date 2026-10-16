@@ -70,7 +70,22 @@ pitchRouter.get('/', async (req: Request, res: Response) => {
       },
     });
 
-    res.json({ pitches });
+    const twoHoursAgo = new Date(Date.now() - 2.5 * 60 * 60 * 1000);
+
+    const sanitizedPitches = pitches.map((pitch) => {
+      const hasRecentBall = Boolean(pitch.hasBallNow && pitch.ballReportedAt && pitch.ballReportedAt >= twoHoursAgo);
+      let resolvedStatus = pitch.activeStatus;
+      if ((resolvedStatus === 'LIVE' || resolvedStatus === 'BUILDING') && !hasRecentBall && pitch._count.lobbies === 0) {
+        resolvedStatus = 'DRY';
+      }
+      return {
+        ...pitch,
+        hasBallNow: hasRecentBall,
+        activeStatus: resolvedStatus,
+      };
+    });
+
+    res.json({ pitches: sanitizedPitches });
   } catch (err) {
     console.error('Fetch pitches error:', err);
     res.status(500).json({ error: 'Failed to fetch pitches' });
@@ -99,7 +114,20 @@ pitchRouter.get('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({ pitch });
+    const twoHoursAgo = new Date(Date.now() - 2.5 * 60 * 60 * 1000);
+    const hasRecentBall = Boolean(pitch.hasBallNow && pitch.ballReportedAt && pitch.ballReportedAt >= twoHoursAgo);
+    let resolvedStatus = pitch.activeStatus;
+    if ((resolvedStatus === 'LIVE' || resolvedStatus === 'BUILDING') && !hasRecentBall && pitch._count.lobbies === 0) {
+      resolvedStatus = 'DRY';
+    }
+
+    res.json({
+      pitch: {
+        ...pitch,
+        hasBallNow: hasRecentBall,
+        activeStatus: resolvedStatus,
+      },
+    });
   } catch (err) {
     console.error('Fetch pitch error:', err);
     res.status(500).json({ error: 'Failed to fetch pitch' });
