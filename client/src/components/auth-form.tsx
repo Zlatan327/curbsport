@@ -47,7 +47,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   return (
     <div className="auth-card">
-      <div className="auth-card__topline"><ShieldCheck size={15} /><span>LOCAL FOOTBALL / REAL PEOPLE</span></div>
+      <div className="auth-card__topline"><ShieldCheck size={15} /><span>CAMPUS PICKUP / REAL BALLERS</span></div>
       <p className="eyebrow">{isRegister ? "NEW TO THE GROUND?" : "BACK ON THE GROUND?"}</p>
       <h1>{isRegister ? <>JOIN<br /><em>THE SET.</em></> : <>BALL<br /><em>KNOWS.</em></>}</h1>
       <p className="auth-card__intro">{isRegister ? "Pick a unique username. No Google sign-in. Your account is bound to your device." : "Your local pitch is calling. Enter your username and get back in play."}</p>
