@@ -67,21 +67,43 @@ pitchRouter.get('/', async (req: Request, res: Response) => {
       include: {
         school: { select: { name: true } },
         _count: { select: { votes: true, lobbies: true } },
+        lobbies: {
+          where: {
+            status: { in: ['BUILDING', 'FULL', 'ACTIVE'] },
+          },
+          select: {
+            id: true,
+            status: true,
+            _count: { select: { members: true } },
+          },
+        },
       },
     });
 
-    const twoHoursAgo = new Date(Date.now() - 2.5 * 60 * 60 * 1000);
+    const twoHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
 
     const sanitizedPitches = pitches.map((pitch) => {
       const hasRecentBall = Boolean(pitch.hasBallNow && pitch.ballReportedAt && pitch.ballReportedAt >= twoHoursAgo);
+      const activeLobbies = pitch.lobbies || [];
+      const hasActiveLobbies = activeLobbies.length > 0;
       let resolvedStatus = pitch.activeStatus;
-      if ((resolvedStatus === 'LIVE' || resolvedStatus === 'BUILDING') && !hasRecentBall && pitch._count.lobbies === 0) {
-        resolvedStatus = 'DRY';
+      if (hasActiveLobbies && resolvedStatus === 'DRY') {
+        resolvedStatus = 'BUILDING';
       }
+
+      const playersInLobbies = activeLobbies.reduce((sum, l) => sum + (l._count?.members || 0), 0);
+      const playersNow = playersInLobbies > 0
+        ? playersInLobbies
+        : (resolvedStatus === 'LIVE' ? 10 : resolvedStatus === 'BUILDING' ? 4 : 0);
+
+      const setsToday = pitch._count.lobbies;
+
       return {
         ...pitch,
         hasBallNow: hasRecentBall,
         activeStatus: resolvedStatus,
+        playersNow,
+        setsToday,
       };
     });
 
@@ -106,6 +128,16 @@ pitchRouter.get('/:id', async (req: Request, res: Response) => {
         school: { select: { name: true } },
         createdBy: { select: { alias: true } },
         _count: { select: { votes: true, lobbies: true, banterMessages: true } },
+        lobbies: {
+          where: {
+            status: { in: ['BUILDING', 'FULL', 'ACTIVE'] },
+          },
+          select: {
+            id: true,
+            status: true,
+            _count: { select: { members: true } },
+          },
+        },
       },
     });
 
@@ -114,18 +146,29 @@ pitchRouter.get('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    const twoHoursAgo = new Date(Date.now() - 2.5 * 60 * 60 * 1000);
+    const twoHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
     const hasRecentBall = Boolean(pitch.hasBallNow && pitch.ballReportedAt && pitch.ballReportedAt >= twoHoursAgo);
+    const activeLobbies = pitch.lobbies || [];
+    const hasActiveLobbies = activeLobbies.length > 0;
     let resolvedStatus = pitch.activeStatus;
-    if ((resolvedStatus === 'LIVE' || resolvedStatus === 'BUILDING') && !hasRecentBall && pitch._count.lobbies === 0) {
-      resolvedStatus = 'DRY';
+    if (hasActiveLobbies && resolvedStatus === 'DRY') {
+      resolvedStatus = 'BUILDING';
     }
+
+    const playersInLobbies = activeLobbies.reduce((sum, l) => sum + (l._count?.members || 0), 0);
+    const playersNow = playersInLobbies > 0
+      ? playersInLobbies
+      : (resolvedStatus === 'LIVE' ? 10 : resolvedStatus === 'BUILDING' ? 4 : 0);
+
+    const setsToday = pitch._count.lobbies;
 
     res.json({
       pitch: {
         ...pitch,
         hasBallNow: hasRecentBall,
         activeStatus: resolvedStatus,
+        playersNow,
+        setsToday,
       },
     });
   } catch (err) {
